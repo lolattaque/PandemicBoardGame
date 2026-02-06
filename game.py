@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import pygame
 import random
 from players import Player
@@ -17,17 +16,29 @@ for name, data in city_list.items():
 
 largefont = pygame.font.SysFont("arial", 60)
 smallfont = pygame.font.SysFont("arial", 40)  
+cityfont = pygame.font.SysFont("arial", 12, bold=True)
 
-width, height = 1400, 800
+width, height = 1200, 800
 screen = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Pandemic Board Game")
 
 board = pygame.image.load("PandemicGameBoard.jpg")
-board = pygame.transform.scale(board, (width-200, height))
+board = pygame.transform.scale(board, (width, height))
 
 player_options = [2, 3, 4]
 selected_index = 0
 num_players = player_options[selected_index]
+
+def get_colour(colour_str):
+    if colour_str == "Blue":
+        return (0, 0, 255)
+    elif colour_str == "Yellow":
+        return (150, 150, 0)
+    elif colour_str == "Black":
+        return (80, 80, 80)
+    elif colour_str == "Red":
+        return (255, 0, 0)
+    return (255, 255, 255)
 
 def loading_screen():
     global selected_index
@@ -63,23 +74,55 @@ def loading_screen():
                 selected_index = i
                 break
 
-def handle_mouse_click():
-    mouse_pressed = pygame.mouse.get_pressed()
-    if mouse_pressed[0]:
-        mouse_pos = pygame.mouse.get_pos()
-        print("Mouse clicked at:", mouse_pos)
+def draw_connections():
+    drawn_connections = set()
+    for city_name, city in city_objects.items():
+        start_pos = city.location
+        start_colour = get_colour(city.colour)
+        
+        for connection_name in city.connections:
+            if connection_name in city_objects:
+                target_city = city_objects[connection_name]
+                end_pos = target_city.location
+                end_colour = get_colour(target_city.colour)
+                
+                dist = ((start_pos[0] - end_pos[0])**2 + (start_pos[1] - end_pos[1])**2)**0.5
+                
+                if dist < 750:
+                    connection_pair = tuple(sorted((city_name, connection_name)))
+                    if connection_pair not in drawn_connections:
+                        mid_x = (start_pos[0] + end_pos[0]) / 2
+                        mid_y = (start_pos[1] + end_pos[1]) / 2
+                        mid_pos = (mid_x, mid_y)
+                        
+                        pygame.draw.line(screen, start_colour, start_pos, mid_pos, 3)
+                        pygame.draw.line(screen, end_colour, mid_pos, end_pos, 3)
+                        
+                        drawn_connections.add(connection_pair)
 
 def draw_cities():
     for city in city_objects.values():
         x, y = city.location
-        color = (0, 0, 255)
-        if city.colour == "Yellow":
-            color = (255, 255, 0)
-        elif city.colour == "Black":
-            color = (0, 0, 0)
-        elif city.colour == "Red":
-            color = (255, 0, 0)
+        color = get_colour(city.colour)
+
+        pygame.draw.circle(screen, (255, 255, 255), (x, y), 12)
         pygame.draw.circle(screen, color, (x, y), 10)
+
+        name_surface = cityfont.render(city.name, True, (255, 255, 255))
+        name_rect = name_surface.get_rect(center=(x, y + 25))
+        bg_rect = name_rect.inflate(4, 2)
+        pygame.draw.rect(screen, (0, 0, 0), bg_rect)
+        screen.blit(name_surface, name_rect)
+
+        virus_count_surface = cityfont.render(str(city.virus), True, (255, 255, 255))
+        virus_rect = virus_count_surface.get_rect(center=(x, y))
+        screen.blit(virus_count_surface, virus_rect)
+
+def draw_board():
+    header_surface = largefont.render("PANDEMIC", True, (255, 255, 255))
+    header_rect = header_surface.get_rect(center=(230, 80))
+    screen.blit(header_surface, header_rect)
+
 
 running = True
 clock = pygame.time.Clock()
@@ -89,8 +132,6 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-
-        # --- Handle arrow keys ---
         elif event.type == pygame.KEYDOWN and game_state[0] == 1:
             if event.key == pygame.K_RETURN:
                 game_state[0] = 0 
@@ -98,10 +139,12 @@ while running:
     if game_state[0] == 1:
         loading_screen()
     else:
-        screen.fill((0,0,0))
-        screen.blit(board, (0, 0))
+        screen.fill((0,30,70))
+        #screen.blit(board, (0, 0))
+        
+        draw_connections()
         draw_cities()
-        handle_mouse_click()
+        draw_board()
 
     pygame.display.flip()
     clock.tick(60)

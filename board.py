@@ -5,6 +5,7 @@ class Board:
         self.discard_pile = []
         self.outbreak_counter = 0
         self.infection_rate = 2
+        self.cures = [False, False, False, False]
 
     def shuffle(self):
         pass
