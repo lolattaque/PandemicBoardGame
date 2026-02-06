@@ -22,7 +22,12 @@ class Game:
         self.outbreak_counter = 0
         self.infection_rate = 2
 
-
+class Disease:
+    def __init__(self,color):
+        self.color = color
+        self.cubes_left = 24
+        self.cure_discovered = False
+        
         
 
         
