@@ -1,8 +1,28 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Feb  3 19:47:13 2026
+import pygame
+import random
+import gameclasses
 
-@author: LiXinrui
-"""
+pygame.init()
 
-"""asdasdadasdaasd"""
+width, height = 1200, 800
+screen = pygame.display.set_mode((width, height))
+pygame.display.set_caption("Pandemic Board Game")
+
+board = pygame.image.load("PandemicGameBoard.jpg")
+board = pygame.transform.scale(board, (width, height))
+
+running = True
+clock = pygame.time.Clock()
+
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    screen.blit(board, (0, 0))
+
+    pygame.display.flip()
+    clock.tick(60)
+
+pygame.quit()
