@@ -7,6 +7,18 @@ class City:
         self.virus = 0
         self.research_center = False
 
+    def outbreak(self, city_objects):
+        if self.virus >= 4:
+            self.virus -= 1
+            for connections in self.connections:
+                neighbour = city_objects[connections]
+                print(neighbour)
+                neighbour.virus += 1
+
+                if neighbour.virus >= 4:
+                    neighbour.outbreak(city_objects)
+            
+
 city_list = {
     # BLUE (Done)
     "San Francisco": {"connections": ["Chicago", "Tokyo", "Los Angeles", "Manila"], "colour": "Blue", "location": (100, 280)},

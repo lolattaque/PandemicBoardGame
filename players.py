@@ -2,7 +2,7 @@ class Player:
     def __init__(self, role, starting_location):
         self.cards = []
         self.role = role
-        self.location = starting_location
+        self.city = starting_location
         self.actions = 4
 
     def move(self, city):

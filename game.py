@@ -2,9 +2,9 @@ import pygame
 import random
 from players import Player
 from cities import City, city_list
+from board import Board
 
 pygame.init()
-
 city_objects = {}
 for name, data in city_list.items():
     city_objects[name] = City(
@@ -124,6 +124,10 @@ def draw_board():
     screen.blit(header_surface, header_rect)
 
 
+Pandemic_Game = Board(city_objects)
+Pandemic_Game.shuffle_infection_deck()
+Pandemic_Game.set_board(city_objects)
+
 running = True
 clock = pygame.time.Clock()
 game_state = [1,0,0,0]
@@ -145,6 +149,10 @@ while running:
         draw_connections()
         draw_cities()
         draw_board()
+
+        for city_name in city_objects:
+            city = city_objects[city_name]
+            city.outbreak(city_objects)
 
     pygame.display.flip()
     clock.tick(60)

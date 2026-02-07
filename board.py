@@ -1,14 +1,31 @@
+import random
 class Board:
-    def __init__(self):
-        self.infection_cards = []
-        self.city_cards = []
-        self.discard_pile = []
+    def __init__(self, city_objects):
+        self.infection_cards = list(city_objects.keys())
+        self.city_cards = list(city_objects.keys())
+        self.infection_card_discard_pile = []
         self.outbreak_counter = 0
         self.infection_rate = 2
         self.cures = [False, False, False, False]
+        self.shuffle_infection_deck()
 
-    def shuffle(self):
-        pass
+    def shuffle_infection_deck(self):
+        self.infection_cards.extend(self.infection_card_discard_pile)
+        self.infection_card_discard_pile = []
+        random.shuffle(self.infection_cards)
 
-    def draw_cards(self):
-        pass
+    def draw_infection_card(self):
+        card = self.infection_cards.pop()
+        self.infection_card_discard_pile.append(card)
+        return card
+        
+    def set_board(self, city_objects):
+        for i in range (3):
+            cubes = 3 - i
+            for city in range (3):
+                city_name = self.draw_infection_card()
+                city_objects[city_name].virus = cubes
+                print(f"Initial Infection: {city_name} gets {cubes} cubes.")
+                print(self.infection_card_discard_pile)
+                
+
