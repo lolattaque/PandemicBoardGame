@@ -3,10 +3,12 @@ MAX_RESEARCH_STATIONS = 6
 
 
 class Player:
-    def __init__(self, role, starting_location):
+    def __init__(self, name, role, colour):
         self.cards = []
+        self.name = name
         self.role = role
-        self.city = starting_location
+        self.city = "Atlanta"
+        self.colour = colour
         self.actions = 4
 
     def drive_ferry(self, target_city_name, city_objects):

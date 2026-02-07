@@ -5,14 +5,6 @@ from cities import City, city_list
 from board import Board
 
 pygame.init()
-city_objects = {}
-for name, data in city_list.items():
-    city_objects[name] = City(
-        name=name,
-        connections=data["connections"],
-        colour=data["colour"],
-        location=data["location"]
-    )
 
 largefont = pygame.font.SysFont("arial", 60)
 smallfont = pygame.font.SysFont("arial", 40)  
@@ -25,9 +17,28 @@ pygame.display.set_caption("Pandemic Board Game")
 board = pygame.image.load("PandemicGameBoard.jpg")
 board = pygame.transform.scale(board, (width, height))
 
+city_objects = {}
+for name, data in city_list.items():
+    city_objects[name] = City(
+        name=name,
+        connections=data["connections"],
+        colour=data["colour"],
+        location=data["location"]
+    )
+city_objects["Atlanta"].research_center = True
+
+players = []
 player_options = [2, 3, 4]
 selected_index = 0
-num_players = player_options[selected_index]
+player_colors = [(255, 255, 255), (0, 255, 0), (255, 165, 0), (255, 0, 255)]
+
+for i in range(4):
+    new_player = Player(
+        name=f"Player {i+1}",
+        role="Medic",
+        colour=player_colors[i]
+    )
+    players.append(new_player)
 
 def get_colour(colour_str):
     if colour_str == "Blue":
@@ -108,7 +119,12 @@ def draw_cities():
         pygame.draw.circle(screen, (255, 255, 255), (x, y), 12)
         pygame.draw.circle(screen, color, (x, y), 10)
 
-        name_surface = cityfont.render(city.name, True, (255, 255, 255))
+        city_txt = city.name
+
+        if city.research_center == True:
+            city_txt += " (R)"
+
+        name_surface = cityfont.render(city_txt, True, (255, 255, 255))
         name_rect = name_surface.get_rect(center=(x, y + 25))
         bg_rect = name_rect.inflate(4, 2)
         pygame.draw.rect(screen, (0, 0, 0), bg_rect)
@@ -123,7 +139,44 @@ def draw_board():
     header_rect = header_surface.get_rect(center=(230, 80))
     screen.blit(header_surface, header_rect)
 
+def draw_players():
+    for i in range(num_players):
+        p = players[i]
+        city = city_objects[p.city]
+        x, y = city.location
+        offset_x = x + (i * 10) - 22.5
+        offset_y = y + 30
+        pygame.draw.rect(screen, p.colour, (offset_x, offset_y, 15, 15))
+        pygame.draw.rect(screen, (0, 0, 0), (offset_x, offset_y, 15, 15), 1)
 
+turn = 0
+def player_test():
+    global turn
+    mouse_pos = pygame.mouse.get_pos()
+    mouse_click = pygame.mouse.get_pressed()
+
+    if mouse_click[0]:
+        active_player = players[turn % num_players]
+        
+        for city_name, city in city_objects.items():
+            dist = ((mouse_pos[0] - city.location[0])**2 + (mouse_pos[1] - city.location[1])**2)**0.5
+            
+            if dist < 20:
+                current_city_obj = city_objects[active_player.city]
+                
+                if city_name in current_city_obj.connections:
+                    active_player.drive_ferry(city_name, city_objects)
+                    pygame.time.delay(200)
+
+
+                elif city_name == active_player.city:
+                    active_player.treat_disease(current_city_obj.colour, city_objects, Pandemic_Game)
+                    pygame.time.delay(200)
+
+        if active_player.actions == 0:
+            active_player.actions = 4
+            turn += 1
+                    
 Pandemic_Game = Board(city_objects)
 Pandemic_Game.shuffle_infection_deck()
 Pandemic_Game.set_board(city_objects)
@@ -139,6 +192,7 @@ while running:
         elif event.type == pygame.KEYDOWN and game_state[0] == 1:
             if event.key == pygame.K_RETURN:
                 game_state[0] = 0 
+                num_players = player_options[selected_index]
 
     if game_state[0] == 1:
         loading_screen()
@@ -149,6 +203,8 @@ while running:
         draw_connections()
         draw_cities()
         draw_board()
+        draw_players()
+        player_test()
 
         for city_name in city_objects:
             city = city_objects[city_name]
