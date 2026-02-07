@@ -7,6 +7,8 @@ class Board:
         self.outbreak_counter = 0
         self.infection_rate = 2
         self.cures = [False, False, False, False]
+        self.eradicated = [False, False, False, False]
+        self.player_discard_pile = []
         self.shuffle_infection_deck()
 
     def shuffle_infection_deck(self):
