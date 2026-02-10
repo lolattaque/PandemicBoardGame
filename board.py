@@ -10,6 +10,7 @@ class Board:
         self.eradicated = [False, False, False, False]
         self.player_discard_pile = []
         self.shuffle_infection_deck()
+        random.shuffle(self.city_cards)
 
     def shuffle_infection_deck(self):
         self.infection_cards.extend(self.infection_card_discard_pile)
@@ -20,6 +21,10 @@ class Board:
         card = self.infection_cards.pop()
         self.infection_card_discard_pile.append(card)
         return card
+    
+    def draw_city_card(self):
+        card = self.infection_cards.pop()
+        return card
         
     def set_board(self, city_objects):
         for i in range (3):
@@ -27,7 +32,11 @@ class Board:
             for city in range (3):
                 city_name = self.draw_infection_card()
                 city_objects[city_name].virus = cubes
-                print(f"Initial Infection: {city_name} gets {cubes} cubes.")
-                print(self.infection_card_discard_pile)
+                
+    def infect_virus(self, city_objects):
+        for i in range(self.infection_rate):
+            city_name = self.draw_infection_card()
+            city_objects[city_name].virus += 1
+            print(f"Added 1 virus to {city_name}")
                 
 

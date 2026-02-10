@@ -17,6 +17,8 @@ pygame.display.set_caption("Pandemic Board Game")
 board = pygame.image.load("PandemicGameBoard.jpg")
 board = pygame.transform.scale(board, (width, height))
 
+
+
 city_objects = {}
 for name, data in city_list.items():
     city_objects[name] = City(
@@ -31,6 +33,10 @@ players = []
 player_options = [2, 3, 4]
 selected_index = 0
 player_colors = [(255, 255, 255), (0, 255, 0), (255, 165, 0), (255, 0, 255)]
+
+Pandemic_Game = Board(city_objects)
+Pandemic_Game.shuffle_infection_deck()
+Pandemic_Game.set_board(city_objects)
 
 for i in range(4):
     new_player = Player(
@@ -176,10 +182,10 @@ def player_test():
         if active_player.actions == 0:
             active_player.actions = 4
             turn += 1
-                    
-Pandemic_Game = Board(city_objects)
-Pandemic_Game.shuffle_infection_deck()
-Pandemic_Game.set_board(city_objects)
+            Pandemic_Game.infect_virus(city_objects)
+            active_player.draw_cards(Pandemic_Game.city_cards)
+            
+            
 
 running = True
 clock = pygame.time.Clock()

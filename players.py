@@ -10,6 +10,17 @@ class Player:
         self.city = "Atlanta"
         self.colour = colour
         self.actions = 4
+        
+    def draw_cards(self, city_cards):
+        if len(self.cards) > 7:
+            pass
+        
+        else:
+            for i in range(2):
+                drawn_card = city_cards.pop()
+                self.cards.append(drawn_card)
+                print(self.cards)
+        
 
     def drive_ferry(self, target_city_name, city_objects):
         if self.actions > 0:
