@@ -10,7 +10,7 @@ largefont = pygame.font.SysFont("arial", 60)
 smallfont = pygame.font.SysFont("arial", 40)  
 cityfont = pygame.font.SysFont("arial", 12, bold=True)
 
-width, height = 1200, 800
+width, height = 1500, 800
 screen = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Pandemic Board Game")
 
