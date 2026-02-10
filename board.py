@@ -24,6 +24,7 @@ class Board:
     
     def draw_city_card(self):
         card = self.infection_cards.pop()
+        self.player_discard_pile.append(card)
         return card
         
     def set_board(self, city_objects):
