@@ -10,6 +10,8 @@ class Player:
         self.city = "Atlanta"
         self.colour = colour
         self.actions = 4
+        self.require_to_cure = 5
+        self.operations = False
         
     def draw_cards(self, city_cards):
         if len(self.cards) > 7:
@@ -103,7 +105,7 @@ class Player:
         if self.actions > 0:
             current = city_objects.get(self.city)
             idx = COLOUR_INDEX.get(colour)
-            required = 4 if self.role == "Scientist" else 5
+            required = self.require_to_cure
             if current and current.research_center and not board.cures[idx]:
                 if len(cards_to_discard) == required and all(c in self.cards for c in cards_to_discard):
                     if all(city_objects.get(c).colour == colour for c in cards_to_discard):
@@ -124,7 +126,8 @@ class Medic(Player):
     pass
 
 class Scientist(Player):
-    pass
+        Player.require_to_cure = 4
+
 
 class Researcher(Player):
     pass
@@ -136,7 +139,8 @@ class Contingency_Planner(Player):
     pass
 
 class Operations_Expert(Player):
-    pass
+    Player.operations = True
+
 
 class Quarantine_Specialist(Player):
     pass
