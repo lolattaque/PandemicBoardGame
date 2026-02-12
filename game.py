@@ -1,6 +1,6 @@
 import pygame
 import random
-from players import Player
+from players import Player, Medic, Scientist, Researcher, Operations_Expert, Dispatcher, Quarantine_Specialist, Contingency_Planner
 from cities import City, city_list
 from board import Board
 
@@ -10,7 +10,7 @@ largefont = pygame.font.SysFont("arial", 60)
 smallfont = pygame.font.SysFont("arial", 40)  
 cityfont = pygame.font.SysFont("arial", 12, bold=True)
 
-width, height = 1500, 800
+width, height = 1200, 800
 screen = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Pandemic Board Game")
 
@@ -38,13 +38,17 @@ Pandemic_Game = Board(city_objects)
 Pandemic_Game.shuffle_infection_deck()
 Pandemic_Game.set_board(city_objects)
 
-for i in range(4):
-    new_player = Player(
-        name=f"Player {i+1}",
-        role="Medic",
-        colour=player_colors[i]
-    )
-    players.append(new_player)
+role_classes = [
+    Medic, 
+    Scientist, 
+    Researcher, 
+    Dispatcher, 
+    Contingency_Planner, 
+    Operations_Expert, 
+    Quarantine_Specialist
+]
+
+random.shuffle(role_classes)
 
 def get_colour(colour_str):
     if colour_str == "Blue":
@@ -156,13 +160,45 @@ def draw_players():
         pygame.draw.rect(screen, (0, 0, 0), (offset_x, offset_y, 15, 15), 1)
 
 turn = 0
+
 def player_test():
     global turn
     mouse_pos = pygame.mouse.get_pos()
     mouse_click = pygame.mouse.get_pressed()
+    keys = pygame.key.get_pressed()
+    active_player = players[turn % num_players]
+
+    if keys[pygame.K_r]:
+        print("GGS")
+        active_player.build_research_station(city_objects, Pandemic_Game)
+        pygame.time.delay(200)
+
+    elif keys[pygame.K_c] and city_objects[active_player.city].research_center:
+        active_player.discover_cure(city_objects[active_player.city].colour, [c for c in active_player.cards if city_objects[c].colour == city_objects[active_player.city].colour], city_objects, Pandemic_Game)
+        pygame.time.delay(200)
+        print(Pandemic_Game)
+
+    if keys[pygame.K_s]:
+        print("swap")
+        others = []
+        for p in players:
+            if p != active_player:
+                if p.city == active_player.city:
+                    others.append(p)
+        target = others[0]
+        if active_player.city in active_player.cards:
+            active_player.share_knowledge(target, active_player.city, True, city_objects)
+        elif active_player.city in target.cards:
+            active_player.share_knowledge(target, active_player.city, False, city_objects)
+        pygame.time.delay(200)
+
+    elif keys[pygame.K_SPACE]:
+        if active_player.actions > 0:
+            active_player.actions -= 1
+            print(active_player.actions)
+            pygame.time.delay(200)
 
     if mouse_click[0]:
-        active_player = players[turn % num_players]
         
         for city_name, city in city_objects.items():
             dist = ((mouse_pos[0] - city.location[0])**2 + (mouse_pos[1] - city.location[1])**2)**0.5
@@ -172,20 +208,42 @@ def player_test():
                 
                 if city_name in current_city_obj.connections:
                     active_player.drive_ferry(city_name, city_objects)
-                    pygame.time.delay(200)
-
 
                 elif city_name == active_player.city:
                     active_player.treat_disease(current_city_obj.colour, city_objects, Pandemic_Game)
-                    pygame.time.delay(200)
 
-        if active_player.actions == 0:
-            active_player.actions = 4
-            turn += 1
-            Pandemic_Game.infect_virus(city_objects)
+                elif city_name in active_player.cards:
+                    active_player.direct_flight(city_name, city_objects, Pandemic_Game)
+                
+                elif active_player.city in active_player.cards:
+                    active_player.charter_flight(city_name, city_objects, Pandemic_Game)
+
+                else:
+                    active_player.shuttle_flight(city_name, city_objects)
+
+                pygame.time.delay(200)
+
+    if active_player.actions == 0:
+        active_player.actions = 4
+        print(active_player.actions)
+        turn += 1
+        Pandemic_Game.infect_virus(city_objects)
+        for _ in range (2):
             active_player.draw_cards(Pandemic_Game.city_cards)
+    
+    action_text = largefont.render(f"Actions: {active_player.actions}", True, active_player.colour)
+    screen.blit(action_text, (20, height - 80))
             
-            
+def player_display():
+    screen.fill((0,0,0))
+    for i, player in enumerate(players):
+        x, y, w, h = (i%2)*(width/2), (i//2)*(height/2), width/2, height/2
+        pygame.draw.rect(screen, player.colour, (x, y, w, h))
+        pygame.draw.circle(screen, (100,100,100), (int(x+80), int(y+80)), 60)
+        screen.blit(smallfont.render(type(player).__name__, True, (0,0,0)), (x+150, y+60))
+        for j, card in enumerate(player.cards):
+            card_color = get_colour(city_objects[card].colour) if card in city_objects else (0,0,0)
+            screen.blit(smallfont.render(f" - {card}", True, card_color), (x+30, y+160+(j*40)))
 
 running = True
 clock = pygame.time.Clock()
@@ -199,9 +257,29 @@ while running:
             if event.key == pygame.K_RETURN:
                 game_state[0] = 0 
                 num_players = player_options[selected_index]
+                for i in range(num_players):
+                    new_player = role_classes[i](
+                        name=f"Player {i+1}",
+                        colour=player_colors[i],
+                        total=num_players,
+                        city_cards = Pandemic_Game.city_cards
+                    )
+                    players.append(new_player)
+
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_p:
+                if game_state [3] == 0:
+                    game_state[3] = 1
+                else:
+                    game_state[3] = 0
 
     if game_state[0] == 1:
         loading_screen()
+    
+    elif game_state[3] == 1:
+        player_display()
+
+    
     else:
         screen.fill((0,30,70))
         #screen.blit(board, (0, 0))

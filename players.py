@@ -3,26 +3,26 @@ MAX_RESEARCH_STATIONS = 6
 
 
 class Player:
-    def __init__(self, name, role, colour):
+    def __init__(self, name, colour, total, city_cards):
         self.cards = []
         self.name = name
-        self.role = role
         self.city = "Atlanta"
         self.colour = colour
         self.actions = 4
         self.require_to_cure = 5
         self.operations = False
+
+        for _ in range (6-total):
+            self.draw_cards(city_cards)
+
         
     def draw_cards(self, city_cards):
         if len(self.cards) > 7:
             pass
         
         else:
-            for i in range(2):
-                drawn_card = city_cards.pop()
-                self.cards.append(drawn_card)
-                print(self.cards)
-        
+            drawn_card = city_cards.pop()
+            self.cards.append(drawn_card)        
 
     def drive_ferry(self, target_city_name, city_objects):
         if self.actions > 0:
@@ -80,7 +80,7 @@ class Player:
             if current and current.colour == colour and current.virus > 0:
                 idx = COLOUR_INDEX.get(colour)
                 if idx is not None:
-                    if board.cures[idx] or self.role == 'medic':
+                    if board.cures[idx]:
                         current.virus = 0
                         total = sum(c.virus for c in city_objects.values() if c.colour == colour)
                         if total == 0:
@@ -123,7 +123,17 @@ class Player:
 
 
 class Medic(Player):
-    pass
+    def treat_disease(self, colour, city_objects, board):
+        if self.actions > 0:
+            current = city_objects.get(self.city)
+            if current and current.colour == colour and current.virus > 0:
+                idx = COLOUR_INDEX.get(colour)
+                if idx is not None:
+                    current.virus = 0
+                    total = sum(c.virus for c in city_objects.values() if c.colour == colour)
+                    if total == 0:
+                        board.eradicated[idx] = True
+                    self.actions -= 1
 
 class Scientist(Player):
         Player.require_to_cure = 4
