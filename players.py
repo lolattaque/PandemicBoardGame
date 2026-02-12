@@ -1,3 +1,5 @@
+from cities import city_list
+
 COLOUR_INDEX = {"Blue": 0, "Yellow": 1, "Black": 2, "Red": 3}
 MAX_RESEARCH_STATIONS = 6
 
@@ -91,21 +93,22 @@ class Player:
 
     def share_knowledge(self, other_player, card, give, city_objects):
         if self.actions > 0:
-            if other_player.city == self.city and card == self.city:
-                if give and card in self.cards:
-                    self.cards.remove(card)
-                    other_player.cards.append(card)
-                    self.actions -= 1
-                elif not give and card in other_player.cards:
-                    other_player.cards.remove(card)
-                    self.cards.append(card)
-                    self.actions -= 1
+            if other_player.city != self.city:
+                return
+            if give and card in self.cards and card == self.city:
+                self.cards.remove(card)
+                other_player.cards.append(card)
+                self.actions -= 1
+            elif not give and card in other_player.cards and card == self.city:
+                other_player.cards.remove(card)
+                self.cards.append(card)
+                self.actions -= 1
 
     def discover_cure(self, colour, cards_to_discard, city_objects, board):
         if self.actions > 0:
             current = city_objects.get(self.city)
             idx = COLOUR_INDEX.get(colour)
-            required = self.require_to_cure
+            required = 5
             if current and current.research_center and not board.cures[idx]:
                 if len(cards_to_discard) == required and all(c in self.cards for c in cards_to_discard):
                     if all(city_objects.get(c).colour == colour for c in cards_to_discard):
