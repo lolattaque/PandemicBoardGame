@@ -7,17 +7,25 @@ class City:
         self.virus = 0
         self.research_center = False
 
-    def outbreak(self, city_objects):
-        if self.virus >= 4:
-            self.virus -= 1
-            for connections in self.connections:
-                neighbour = city_objects[connections]
-                print(neighbour)
-                neighbour.virus += 1
+    def outbreak(self, city_objects, board, visited=None):
+        if visited is None:
+            visited = set()
 
-                if neighbour.virus >= 4:
-                    neighbour.outbreak(city_objects)
-            
+        if self.name in visited:
+            return
+
+        if self.virus < 4:
+            return
+
+        visited.add(self.name)
+        board.outbreak_counter += 1
+        self.virus = 3
+
+        for connection in self.connections:
+            neighbour = city_objects[connection]
+            neighbour.virus += 1
+            if neighbour.virus >= 4:
+                neighbour.outbreak(city_objects, board, visited)
 
 city_list = {
     # BLUE (Done)

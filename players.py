@@ -5,7 +5,7 @@ MAX_RESEARCH_STATIONS = 6
 
 
 class Player:
-    def __init__(self, name, colour, total, city_cards):
+    def __init__(self, name, colour, total, city_cards, board):
         self.cards = []
         self.name = name
         self.city = "Atlanta"
@@ -15,16 +15,22 @@ class Player:
         self.operations = False
 
         for _ in range (6-total):
-            self.draw_cards(city_cards)
+            self.draw_cards(city_cards, board)
 
         
-    def draw_cards(self, city_cards):
-        if len(self.cards) > 7:
-            pass
+    def draw_cards(self, city_cards, board):
+        if len(self.cards) == 7:
+            self.cards.pop(0)
         
-        else:
+        if len(self.cards) < 7:
             drawn_card = city_cards.pop()
-            self.cards.append(drawn_card)        
+            if drawn_card == "Infection Card":
+                board.infection_rate += 1
+                board.shuffle_infection_deck()
+                self.draw_cards(city_cards,board)
+
+            else:
+                self.cards.append(drawn_card)        
 
     def drive_ferry(self, target_city_name, city_objects):
         if self.actions > 0:

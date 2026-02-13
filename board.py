@@ -1,6 +1,6 @@
 import random
 class Board:
-    def __init__(self, city_objects):
+    def __init__(self, city_objects, difficulty):
         self.infection_cards = list(city_objects.keys())
         self.city_cards = list(city_objects.keys())
         self.infection_card_discard_pile = []
@@ -9,8 +9,17 @@ class Board:
         self.cures = [False, False, False, False]
         self.eradicated = [False, False, False, False]
         self.player_discard_pile = []
+        self.difficulty = int(difficulty) + 4
+
         self.shuffle_infection_deck()
         random.shuffle(self.city_cards)
+
+    def add_epidemic_card(self):
+        for i in range (self.difficulty):
+            self.city_cards.append("Infection Card")
+        random.shuffle(self.city_cards)
+
+        self.shuffle_infection_deck()
 
     def shuffle_infection_deck(self):
         self.infection_cards.extend(self.infection_card_discard_pile)
@@ -37,7 +46,9 @@ class Board:
     def infect_virus(self, city_objects):
         for i in range(self.infection_rate):
             city_name = self.draw_infection_card()
-            city_objects[city_name].virus += 1
-            print(f"Added 1 virus to {city_name}")
+            city = city_objects[city_name]
+            city.virus += 1
+            if city.virus >= 4:
+                city.outbreak(city_objects, self)
                 
 
