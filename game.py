@@ -249,8 +249,6 @@ def draw_board():
     outbreak_text = tinyGunfont.render(str(Pandemic_Game.outbreak_counter), True, (255,255,255))
     screen.blit(outbreak_text, outbreak_text.get_rect(center=(outbreak_center[0]+1, outbreak_center[1]+1)))
 
-    
-
     infection_center = (100, height-100)
     infection_label = tinyGunfont.render("Infection Rate", True, (255,255,255))
     screen.blit(infection_label, infection_label.get_rect(center=(infection_center[0], infection_center[1]-40)))
@@ -271,13 +269,14 @@ def draw_players():
         pygame.draw.rect(screen, (0, 0, 0), (offset_x, offset_y, 15, 15), 1)
 
 turn = 0
-
+target = None
 def player_test():
-    global turn
+    global turn, target
     mouse_pos = pygame.mouse.get_pos()
     mouse_click = pygame.mouse.get_pressed()
     keys = pygame.key.get_pressed()
     active_player = players[turn % num_players]
+    moved_or_acted = False
 
     if keys[pygame.K_r]:
         active_player.build_research_station(city_objects, Pandemic_Game)
@@ -291,17 +290,24 @@ def player_test():
         pygame.time.delay(200)
 
     if keys[pygame.K_s]:
+        target = None
         others = []
         for p in players:
             if p != active_player:
                 if p.city == active_player.city:
                     others.append(p)
-        target = others[0]
+
+        if others:
+            target = others[0]
         if active_player.city in active_player.cards:
             active_player.share_knowledge(target, active_player.city, True, city_objects)
-        elif active_player.city in target.cards:
-            active_player.share_knowledge(target, active_player.city, False, city_objects)
-        pygame.time.delay(200)
+            target = None
+            pygame.time.delay(200)
+        if target:
+            if active_player.city in target.cards:
+                active_player.share_knowledge(target, active_player.city, False, city_objects)
+                target = None
+                pygame.time.delay(200)
 
     elif keys[pygame.K_SPACE]:
         if active_player.actions > 0:

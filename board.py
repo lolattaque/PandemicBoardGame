@@ -10,7 +10,7 @@ class Board:
         self.eradicated = [False, False, False, False]
         self.player_discard_pile = []
         self.difficulty = int(difficulty) + 4
-
+        
         self.shuffle_infection_deck()
         random.shuffle(self.city_cards)
 
@@ -18,8 +18,6 @@ class Board:
         for i in range (self.difficulty):
             self.city_cards.append("Infection Card")
         random.shuffle(self.city_cards)
-
-        self.shuffle_infection_deck()
 
     def shuffle_infection_deck(self):
         self.infection_cards.extend(self.infection_card_discard_pile)
