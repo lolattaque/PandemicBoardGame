@@ -18,35 +18,39 @@ class Player:
                 self.cards.append(drawn_card)
                 print(self.cards)
 
-    def drive_ferry(self, target_city_name, city_objects):
+    def drive_ferry(self, target_city_name, city_objects, move_pawn=None):
+        mover = move_pawn if move_pawn is not None else self
         if self.actions > 0:
-            current = city_objects.get(self.city)
+            current = city_objects.get(mover.city)
             if current and target_city_name in current.connections:
-                self.city = target_city_name
+                mover.city = target_city_name
                 self.actions -= 1
 
-    def direct_flight(self, city_card_name, city_objects, board):
+    def direct_flight(self, city_card_name, city_objects, board, move_pawn=None):
+        mover = move_pawn if move_pawn is not None else self
         if self.actions > 0:
             if city_card_name in self.cards:
                 self.cards.remove(city_card_name)
                 board.player_discard_pile.append(city_card_name)
-                self.city = city_card_name
+                mover.city = city_card_name
                 self.actions -= 1
 
-    def charter_flight(self, target_city_name, city_objects, board):
+    def charter_flight(self, target_city_name, city_objects, board, move_pawn=None):
+        mover = move_pawn if move_pawn is not None else self
         if self.actions > 0:
-            if self.city in self.cards:
-                self.cards.remove(self.city)
-                board.player_discard_pile.append(self.city)
-                self.city = target_city_name
+            if mover.city in self.cards:
+                self.cards.remove(mover.city)
+                board.player_discard_pile.append(mover.city)
+                mover.city = target_city_name
                 self.actions -= 1
 
-    def shuttle_flight(self, target_city_name, city_objects):
+    def shuttle_flight(self, target_city_name, city_objects, move_pawn=None):
+        mover = move_pawn if move_pawn is not None else self
         if self.actions > 0:
-            current = city_objects.get(self.city)
+            current = city_objects.get(mover.city)
             target = city_objects.get(target_city_name)
             if current.research_center and target.research_center:
-                self.city = target_city_name
+                mover.city = target_city_name
                 self.actions -= 1
 
     def build_research_station(self, city_objects, board, remove_from_city_name=None):
@@ -219,7 +223,12 @@ class Researcher(Player):
                     self.actions -= 1
 
 class Dispatcher(Player):
-    pass
+    def dispatcher_move_pawn_to_occupied_city(self, pawn_player, target_city_name, city_objects, players):
+        if self.actions > 0 and city_objects.get(target_city_name):
+            someone_else_there = any(p.city == target_city_name and p != pawn_player for p in players)
+            if someone_else_there:
+                pawn_player.city = target_city_name
+                self.actions -= 1
 
 class Contingency_Planner(Player):
     pass
