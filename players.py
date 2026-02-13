@@ -99,7 +99,7 @@ class Player:
         if self.actions > 0:
             current = city_objects.get(self.city)
             idx = COLOUR_INDEX.get(colour)
-            required = self.require_to_cure
+            required = 5
             if current and current.research_center and not board.cures[idx]:
                 if len(cards_to_discard) == required and all(c in self.cards for c in cards_to_discard):
                     if all(city_objects.get(c).colour == colour for c in cards_to_discard):
@@ -138,8 +138,7 @@ class Medic(Player):
                 board.eradicated[idx] = True
 
 class Scientist(Player):
-        Player.require_to_cure = 4
-
+    pass
 
 class Researcher(Player):
     pass
@@ -151,7 +150,6 @@ class Contingency_Planner(Player):
     pass
 
 class Operations_Expert(Player):
-    Player.operations = True
 
 
 class Quarantine_Specialist(Player):
