@@ -74,7 +74,7 @@ class Player:
             if current and current.colour == colour and current.virus > 0:
                 idx = COLOUR_INDEX.get(colour)
                 if idx is not None:
-                    if board.cures[idx] or self.role == 'medic':
+                    if board.cures[idx]:
                         current.virus = 0
                         total = sum(c.virus for c in city_objects.values() if c.colour == colour)
                         if total == 0:

@@ -175,6 +175,9 @@ def player_test():
 
     elif keys[pygame.K_c] and city_objects[active_player.city].research_center:
         active_player.discover_cure(city_objects[active_player.city].colour, [c for c in active_player.cards if city_objects[c].colour == city_objects[active_player.city].colour], city_objects, Pandemic_Game)
+        for p in players:
+            if isinstance(p, Medic):
+                p.auto_remove_cured_cubes(city_objects, Pandemic_Game)
         pygame.time.delay(200)
         print(Pandemic_Game)
 
@@ -208,18 +211,26 @@ def player_test():
                 
                 if city_name in current_city_obj.connections:
                     active_player.drive_ferry(city_name, city_objects)
+                    if isinstance(active_player, Medic):
+                        active_player.auto_remove_cured_cubes(city_objects, Pandemic_Game)
 
                 elif city_name == active_player.city:
                     active_player.treat_disease(current_city_obj.colour, city_objects, Pandemic_Game)
 
                 elif city_name in active_player.cards:
                     active_player.direct_flight(city_name, city_objects, Pandemic_Game)
-                
+                    if isinstance(active_player, Medic):
+                        active_player.auto_remove_cured_cubes(city_objects, Pandemic_Game)
+
                 elif active_player.city in active_player.cards:
                     active_player.charter_flight(city_name, city_objects, Pandemic_Game)
+                    if isinstance(active_player, Medic):
+                        active_player.auto_remove_cured_cubes(city_objects, Pandemic_Game)
 
                 else:
                     active_player.shuttle_flight(city_name, city_objects)
+                    if isinstance(active_player, Medic):
+                        active_player.auto_remove_cured_cubes(city_objects, Pandemic_Game)
 
                 pygame.time.delay(200)
 
