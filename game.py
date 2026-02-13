@@ -285,6 +285,9 @@ def player_test():
 
     elif keys[pygame.K_c] and city_objects[active_player.city].research_center:
         active_player.discover_cure(city_objects[active_player.city].colour, [c for c in active_player.cards if city_objects[c].colour == city_objects[active_player.city].colour], city_objects, Pandemic_Game)
+        for p in players:
+            if isinstance(p, Medic):
+                p.auto_remove_cured_cubes(city_objects, Pandemic_Game)
         pygame.time.delay(200)
 
     if keys[pygame.K_s]:
@@ -311,28 +314,35 @@ def player_test():
             
             if dist < 20:
                 current_city_obj = city_objects[active_player.city]
-                moved_or_acted = False
-
-                if city_name == active_player.city:
-                    active_player.treat_disease(current_city_obj.colour, city_objects, Pandemic_Game)
-                    moved_or_acted = True
-
-                elif city_name in current_city_obj.connections:
+                
+                if city_name in current_city_obj.connections:
                     active_player.drive_ferry(city_name, city_objects)
                     moved_or_acted = True
-                
-                elif current_city_obj.research_center and city.research_center:
-                    active_player.shuttle_flight(city_name, city_objects)
+                    if isinstance(active_player, Medic):
+                        active_player.auto_remove_cured_cubes(city_objects, Pandemic_Game)
+
+                elif city_name == active_player.city:
+                    active_player.treat_disease(current_city_obj.colour, city_objects, Pandemic_Game)
                     moved_or_acted = True
 
                 elif city_name in active_player.cards:
                     active_player.direct_flight(city_name, city_objects, Pandemic_Game)
                     moved_or_acted = True
+                    if isinstance(active_player, Medic):
+                        active_player.auto_remove_cured_cubes(city_objects, Pandemic_Game)
 
                 elif active_player.city in active_player.cards:
                     active_player.charter_flight(city_name, city_objects, Pandemic_Game)
                     moved_or_acted = True
+                    if isinstance(active_player, Medic):
+                        active_player.auto_remove_cured_cubes(city_objects, Pandemic_Game)
 
+                else:
+                    active_player.shuttle_flight(city_name, city_objects)
+                    moved_or_acted = True
+                    if isinstance(active_player, Medic):
+                        active_player.auto_remove_cured_cubes(city_objects, Pandemic_Game)
+                
                 if moved_or_acted:
                     pygame.time.delay(200)
                     break
