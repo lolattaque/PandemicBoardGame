@@ -19,7 +19,6 @@ class Board:
             self.city_cards.append("Infection Card")
         random.shuffle(self.city_cards)
 
-        self.shuffle_infection_deck()
 
     def shuffle_infection_deck(self):
         self.infection_cards.extend(self.infection_card_discard_pile)
