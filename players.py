@@ -3,20 +3,32 @@ MAX_RESEARCH_STATIONS = 6
 
 
 class Player:
-    def __init__(self, name, colour, total, city_cards):
+    def __init__(self, name, colour, total, city_cards, board):
         self.cards = []
         self.name = name
         self.city = "Atlanta"
         self.colour = colour
         self.actions = 4
-    
+        self.require_to_cure = 5
+        self.operations = False
 
-    def draw_cards(self, city_cards):
-        if len(self.cards) <= 7:
-            for i in range(2):
-                drawn_card = city_cards.pop()
-                self.cards.append(drawn_card)
-                print(self.cards)
+        for _ in range (6-total):
+            self.draw_cards(city_cards, board)
+
+        
+    def draw_cards(self, city_cards, board):
+        if len(self.cards) == 7:
+            self.cards.pop(0)
+        
+        if len(self.cards) < 7:
+            drawn_card = city_cards.pop()
+            if drawn_card == "Infection Card":
+                board.infection_rate += 1
+                board.shuffle_infection_deck()
+                self.draw_cards(city_cards,board)
+
+            else:
+                self.cards.append(drawn_card)        
 
     def drive_ferry(self, target_city_name, city_objects, move_pawn=None):
         mover = move_pawn if move_pawn is not None else self
