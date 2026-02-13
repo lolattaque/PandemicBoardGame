@@ -10,7 +10,7 @@ class Board:
         self.eradicated = [False, False, False, False]
         self.player_discard_pile = []
         self.difficulty = int(difficulty) + 4
-        
+
         self.shuffle_infection_deck()
         random.shuffle(self.city_cards)
 
