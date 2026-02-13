@@ -84,13 +84,14 @@ class Player:
                     self.actions -= 1
 
     def share_knowledge(self, other_player, card, give, city_objects):
-        if self.actions > 0:
-            if other_player.city == self.city and card == self.city:
-                if give and card in self.cards:
-                    self.cards.remove(card)
-                    other_player.cards.append(card)
-                    self.actions -= 1
-                elif not give and card in other_player.cards:
+        if self.actions > 0 and other_player.city == self.city:
+            if give and card in self.cards and card == self.city:
+                self.cards.remove(card)
+                other_player.cards.append(card)
+                self.actions -= 1
+            elif not give and card in other_player.cards:
+                can_take = card == self.city or (isinstance(other_player, Researcher))
+                if can_take:
                     other_player.cards.remove(card)
                     self.cards.append(card)
                     self.actions -= 1
@@ -186,10 +187,36 @@ class Medic(Player):
                 board.eradicated[idx] = True
 
 class Scientist(Player):
-    pass
+    def discover_cure(self, colour, cards_to_discard, city_objects, board):
+        if self.actions > 0:
+            current = city_objects.get(self.city)
+            idx = COLOUR_INDEX.get(colour)
+            required = 4
+            if current and current.research_center and not board.cures[idx]:
+                if len(cards_to_discard) == required and all(c in self.cards for c in cards_to_discard):
+                    if all(city_objects.get(c).colour == colour for c in cards_to_discard):
+                        for c in cards_to_discard:
+                            self.cards.remove(c)
+                            board.player_discard_pile.append(c)
+                        board.cures[idx] = True
+                        total_cubes = sum(city.virus for city in city_objects.values() if city.colour == colour)
+                        if total_cubes == 0:
+                            board.eradicated[idx] = True
+                        self.actions -= 1
 
 class Researcher(Player):
-    pass
+    def share_knowledge(self, other_player, card, give, city_objects):
+        if self.actions > 0 and other_player.city == self.city:
+            if give:
+                if card in self.cards and card in city_objects:
+                    self.cards.remove(card)
+                    other_player.cards.append(card)
+                    self.actions -= 1
+            else:
+                if card in other_player.cards and card == self.city:
+                    other_player.cards.remove(card)
+                    self.cards.append(card)
+                    self.actions -= 1
 
 class Dispatcher(Player):
     pass
@@ -198,11 +225,10 @@ class Contingency_Planner(Player):
     pass
 
 class Operations_Expert(Player):
-
+    pass
 
 class Quarantine_Specialist(Player):
     pass
-        
 
         
 
