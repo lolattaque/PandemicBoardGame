@@ -290,24 +290,19 @@ def player_test():
         pygame.time.delay(200)
 
     if keys[pygame.K_s]:
-        target = None
-        others = []
-        for p in players:
-            if p != active_player:
-                if p.city == active_player.city:
-                    others.append(p)
-
+        others = [p for p in players if p != active_player and p.city == active_player.city]
         if others:
             target = others[0]
-        if active_player.city in active_player.cards:
-            active_player.share_knowledge(target, active_player.city, True, city_objects)
-            target = None
-            pygame.time.delay(200)
-        if target:
-            if active_player.city in target.cards:
-                active_player.share_knowledge(target, active_player.city, False, city_objects)
-                target = None
-                pygame.time.delay(200)
+            if isinstance(active_player, Researcher):
+                valid_give = [c for c in active_player.cards]
+            else:
+                valid_give = [active_player.city] if active_player.city in active_player.cards else []   
+            valid_take = [active_player.city] if active_player.city in target.cards else []
+            if valid_give:
+                active_player.share_knowledge(target, valid_give[0], True, city_objects)
+            elif valid_take:
+                active_player.share_knowledge(target, valid_take[0], False, city_objects)
+        pygame.time.delay(200)
 
     elif keys[pygame.K_SPACE]:
         if active_player.actions > 0:
