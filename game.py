@@ -270,8 +270,11 @@ def draw_players():
 
 turn = 0
 target = None
+dispatcher_move_other = None
+dispatcher_occupied_mode = False
+
 def player_test():
-    global turn, target
+    global turn, target, dispatcher_move_other, dispatcher_occupied_mode
     mouse_pos = pygame.mouse.get_pos()
     mouse_click = pygame.mouse.get_pressed()
     keys = pygame.key.get_pressed()
@@ -309,41 +312,59 @@ def player_test():
             active_player.actions -= 1
             pygame.time.delay(200)
 
+    if isinstance(active_player, Dispatcher):
+        if keys[pygame.K_d]:
+            dispatcher_move_other = next((p for p in players if p != active_player), None)
+            pygame.time.delay(200)
+        if keys[pygame.K_o]:
+            dispatcher_occupied_mode = True
+            pygame.time.delay(200)
+
     if mouse_click[0]:
         for city_name, city in city_objects.items():
             dist = ((mouse_pos[0] - city.location[0])**2 + (mouse_pos[1] - city.location[1])**2)**0.5
-            
             if dist < 20:
-                current_city_obj = city_objects[active_player.city]
-                
-                if city_name in current_city_obj.connections:
-                    active_player.drive_ferry(city_name, city_objects)
+                if dispatcher_occupied_mode and isinstance(active_player, Dispatcher):
+                    in_city = [p for p in players if p.city == city_name]
+                    not_in_city = [p for p in players if p.city != city_name]
+                    if in_city and not_in_city and active_player.actions > 0:
+                        active_player.dispatcher_move_pawn_to_occupied_city(not_in_city[0], city_name, city_objects, players)
+                    dispatcher_occupied_mode = False
                     moved_or_acted = True
-                    if isinstance(active_player, Medic):
-                        active_player.auto_remove_cured_cubes(city_objects, Pandemic_Game)
-
-                elif city_name == active_player.city:
-                    active_player.treat_disease(current_city_obj.colour, city_objects, Pandemic_Game)
-                    moved_or_acted = True
-
-                elif city_name in active_player.cards:
-                    active_player.direct_flight(city_name, city_objects, Pandemic_Game)
-                    moved_or_acted = True
-                    if isinstance(active_player, Medic):
-                        active_player.auto_remove_cured_cubes(city_objects, Pandemic_Game)
-
-                elif active_player.city in active_player.cards:
-                    active_player.charter_flight(city_name, city_objects, Pandemic_Game)
-                    moved_or_acted = True
-                    if isinstance(active_player, Medic):
-                        active_player.auto_remove_cured_cubes(city_objects, Pandemic_Game)
-
                 else:
-                    active_player.shuttle_flight(city_name, city_objects)
-                    moved_or_acted = True
-                    if isinstance(active_player, Medic):
-                        active_player.auto_remove_cured_cubes(city_objects, Pandemic_Game)
-                
+                    mover = dispatcher_move_other if (isinstance(active_player, Dispatcher) and dispatcher_move_other is not None) else active_player
+                    current_city_obj = city_objects[mover.city]
+                    if city_name in current_city_obj.connections:
+                        active_player.drive_ferry(city_name, city_objects, move_pawn=dispatcher_move_other if isinstance(active_player, Dispatcher) else None)
+                        moved_or_acted = True
+                        if isinstance(mover, Medic):
+                            mover.auto_remove_cured_cubes(city_objects, Pandemic_Game)
+                        if isinstance(active_player, Dispatcher):
+                            dispatcher_move_other = None
+                    elif city_name == active_player.city and dispatcher_move_other is None:
+                        active_player.treat_disease(current_city_obj.colour, city_objects, Pandemic_Game)
+                        moved_or_acted = True
+                    elif city_name in active_player.cards:
+                        active_player.direct_flight(city_name, city_objects, Pandemic_Game, move_pawn=dispatcher_move_other if isinstance(active_player, Dispatcher) else None)
+                        moved_or_acted = True
+                        if isinstance(mover, Medic):
+                            mover.auto_remove_cured_cubes(city_objects, Pandemic_Game)
+                        if isinstance(active_player, Dispatcher):
+                            dispatcher_move_other = None
+                    elif mover.city in active_player.cards:
+                        active_player.charter_flight(city_name, city_objects, Pandemic_Game, move_pawn=dispatcher_move_other if isinstance(active_player, Dispatcher) else None)
+                        moved_or_acted = True
+                        if isinstance(mover, Medic):
+                            mover.auto_remove_cured_cubes(city_objects, Pandemic_Game)
+                        if isinstance(active_player, Dispatcher):
+                            dispatcher_move_other = None
+                    else:
+                        active_player.shuttle_flight(city_name, city_objects, move_pawn=dispatcher_move_other if isinstance(active_player, Dispatcher) else None)
+                        moved_or_acted = True
+                        if isinstance(mover, Medic):
+                            mover.auto_remove_cured_cubes(city_objects, Pandemic_Game)
+                        if isinstance(active_player, Dispatcher):
+                            dispatcher_move_other = None
                 if moved_or_acted:
                     pygame.time.delay(200)
                     break
