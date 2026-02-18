@@ -243,7 +243,50 @@ class Dispatcher(Player):
                 self.actions -= 1
 
 class Contingency_Planner(Player):
-    pass
+    def __init__(self, name, colour, total, city_cards, board):
+        super().__init__(name, colour, total, city_cards, board)
+        self.stored_event_card = None
+
+    def retrieve_event_card(self, card_name, board):
+        event_cards = ("Government Grant", "Airlift", "One Quiet Night", "Forecast", "Resilient Population")
+        if self.actions > 0 and self.stored_event_card is None:
+            if card_name in board.player_discard_pile:
+                board.player_discard_pile.remove(card_name)
+                self.stored_event_card = card_name
+                self.actions -= 1
+
+    def use_event_card(self, card_name, board, city_objects, target_city, reordered_list):
+        if card_name == self.stored_event_card:
+            self._play_stored_event(card_name, board, city_objects, target_city, reordered_list)
+            self.stored_event_card = None
+            return
+        if card_name in self.cards:
+            super().use_event_card(card_name, board, city_objects, target_city, reordered_list)
+
+    def _play_stored_event(self, card_name, board, city_objects, target_city, reordered_list):
+        if card_name == "Government Grant":
+            if target_city:
+                city = city_objects.get(target_city)
+                if city:
+                    city.research_center = True
+        elif card_name == "Airlift":
+            if target_city:
+                self.city = target_city
+        elif card_name == "One Quiet Night":
+            board.quiet_night_active = True
+        elif card_name == "Forecast":
+            num_to_draw = min(6, len(board.infection_cards))
+            top_6 = board.infection_cards[-num_to_draw:]
+            board.infection_cards = board.infection_cards[:-num_to_draw]
+            if reordered_list and len(reordered_list) == num_to_draw:
+                board.infection_cards.extend(reordered_list)
+            else:
+                board.infection_cards.extend(top_6)
+        elif card_name == "Resilient Population":
+            if target_city and hasattr(board, "infection_discard_pile") and target_city in board.infection_discard_pile:
+                board.infection_discard_pile.remove(target_city)
+            elif target_city and hasattr(board, "infection_card_discard_pile") and target_city in board.infection_card_discard_pile:
+                board.infection_card_discard_pile.remove(target_city)
 
 class Operations_Expert(Player):
     pass
