@@ -289,7 +289,38 @@ class Contingency_Planner(Player):
                 board.infection_card_discard_pile.remove(target_city)
 
 class Operations_Expert(Player):
-    pass
+    def __init__(self, name, colour, total, city_cards, board):
+        super().__init__(name, colour, total, city_cards, board)
+        self.ops_expert_special_move_used = False
+
+    def build_research_station(self, city_objects, board, remove_from_city_name=None):
+        if self.actions > 0:
+            current = city_objects.get(self.city)
+            if not current:
+                return
+            count = sum(1 for c in city_objects.values() if c.research_center)
+            can_build = False
+            if count < MAX_RESEARCH_STATIONS:
+                can_build = True
+            elif count >= MAX_RESEARCH_STATIONS and remove_from_city_name:
+                other = city_objects.get(remove_from_city_name)
+                if other and other.research_center:
+                    other.research_center = False
+                    can_build = True
+            if can_build:
+                current.research_center = True
+                self.actions -= 1
+
+    def ops_expert_special_move(self, target_city_name, card_to_discard, city_objects, board):
+        if self.actions > 0 and not self.ops_expert_special_move_used:
+            current = city_objects.get(self.city)
+            if current and current.research_center and target_city_name in city_objects:
+                if card_to_discard in self.cards and card_to_discard in city_objects:
+                    self.cards.remove(card_to_discard)
+                    board.player_discard_pile.append(card_to_discard)
+                    self.city = target_city_name
+                    self.actions -= 1
+                    self.ops_expert_special_move_used = True
 
 class Quarantine_Specialist(Player):
     pass

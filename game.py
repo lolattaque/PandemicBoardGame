@@ -358,6 +358,16 @@ def player_test():
                             mover.auto_remove_cured_cubes(city_objects, Pandemic_Game)
                         if isinstance(active_player, Dispatcher):
                             dispatcher_move_other = None
+                    elif (isinstance(active_player, Operations_Expert) and dispatcher_move_other is None and
+                          not active_player.ops_expert_special_move_used and
+                          city_objects[active_player.city].research_center and
+                          city_name != active_player.city):
+                        city_cards_in_hand = [c for c in active_player.cards if c in city_objects]
+                        if city_cards_in_hand:
+                            active_player.ops_expert_special_move(city_name, city_cards_in_hand[0], city_objects, Pandemic_Game)
+                            moved_or_acted = True
+                            if isinstance(active_player, Medic):
+                                active_player.auto_remove_cured_cubes(city_objects, Pandemic_Game)
                     else:
                         active_player.shuttle_flight(city_name, city_objects, move_pawn=dispatcher_move_other if isinstance(active_player, Dispatcher) else None)
                         moved_or_acted = True
@@ -371,6 +381,8 @@ def player_test():
 
     if active_player.actions == 0:
         active_player.actions = 4
+        if isinstance(active_player, Operations_Expert):
+            active_player.ops_expert_special_move_used = False
         turn += 1
         Pandemic_Game.infect_virus(city_objects)
         for _ in range (2):
