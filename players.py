@@ -325,7 +325,15 @@ class Operations_Expert(Player):
 class Quarantine_Specialist(Player):
     pass
 
-        
 
-
+def quarantine_protects(city_name, players, city_objects):
+    for p in players:
+        if not isinstance(p, Quarantine_Specialist):
+            continue
+        if p.city == city_name:
+            return True
+        cur = city_objects.get(p.city)
+        if cur and city_name in cur.connections:
+            return True
+    return False
 

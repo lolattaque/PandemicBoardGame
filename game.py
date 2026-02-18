@@ -384,7 +384,7 @@ def player_test():
         if isinstance(active_player, Operations_Expert):
             active_player.ops_expert_special_move_used = False
         turn += 1
-        Pandemic_Game.infect_virus(city_objects)
+        Pandemic_Game.infect_virus(city_objects, players)
         for _ in range (2):
             active_player.draw_cards(Pandemic_Game.city_cards, Pandemic_Game)
                 

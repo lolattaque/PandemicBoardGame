@@ -1,3 +1,5 @@
+from players import quarantine_protects
+
 class City:
     def __init__(self, name, connections, colour, location):
         self.connections = connections
@@ -7,7 +9,7 @@ class City:
         self.virus = 0
         self.research_center = False
 
-    def outbreak(self, city_objects, board, visited=None):
+    def outbreak(self, city_objects, board, players=None, visited=None):
         if visited is None:
             visited = set()
 
@@ -23,9 +25,11 @@ class City:
 
         for connection in self.connections:
             neighbour = city_objects[connection]
+            if players and quarantine_protects(neighbour.name, players, city_objects):
+                continue
             neighbour.virus += 1
             if neighbour.virus >= 4:
-                neighbour.outbreak(city_objects, board, visited)
+                neighbour.outbreak(city_objects, board, players, visited)
 
 city_list = {
     # BLUE (Done)

@@ -1,4 +1,6 @@
 import random
+from players import quarantine_protects
+
 class Board:
     def __init__(self, city_objects, difficulty):
         self.infection_cards = list(city_objects.keys())
@@ -41,12 +43,14 @@ class Board:
                 city_name = self.draw_infection_card()
                 city_objects[city_name].virus = cubes
                 
-    def infect_virus(self, city_objects):
+    def infect_virus(self, city_objects, players=None):
         for i in range(self.infection_rate):
             city_name = self.draw_infection_card()
             city = city_objects[city_name]
+            if players and quarantine_protects(city_name, players, city_objects):
+                continue
             city.virus += 1
             if city.virus >= 4:
-                city.outbreak(city_objects, self)
+                city.outbreak(city_objects, self, players)
                 
 
