@@ -61,6 +61,20 @@ def get_colour(colour_str):
         return (255, 0, 0)
     return (255, 255, 255)
 
+ROLE_ACCENT = {
+    "Contingency_Planner": (100, 195, 250),
+    "Operations_Expert": (170, 225, 105),
+    "Dispatcher": (205, 125, 235),
+    "Quarantine_Specialist": (50, 130, 58),
+    "Medic": (255, 152, 0),
+    "Researcher": (230, 185, 125),
+    "Scientist": (200, 55, 55),
+}
+DARK_BG = (26, 32, 44)           
+CARD_BG = (40, 52, 70)           
+TEXT_WHITE = (240, 244, 248)
+TEXT_MUTED = (160, 174, 192)
+
 def loading_screen():
     global selected_index, selected_difficulty
     screen.fill((10, 20, 30))
@@ -194,8 +208,9 @@ def draw_cities():
 
         name_surface = cityfont.render(city_txt, True, (255, 255, 255))
         name_rect = name_surface.get_rect(center=(x, y + 25))
-        bg_rect = name_rect.inflate(4, 2)
-        pygame.draw.rect(screen, (0, 0, 0), bg_rect)
+        bg_rect = name_rect.inflate(6, 3)
+        pygame.draw.rect(screen, (38, 48, 62), bg_rect, border_radius=4)
+        pygame.draw.rect(screen, (55, 70, 90), bg_rect, 1, border_radius=4)
         screen.blit(name_surface, name_rect)
 
         virus_count_surface = cityfont.render(str(city.virus), True, (255, 255, 255))
@@ -259,14 +274,24 @@ def draw_board():
     screen.blit(infection_text, infection_text.get_rect(center=infection_center))
 
 def draw_players():
+    global turn, num_players
+    current_idx = turn % num_players
+    pawn_w = 15
+    gap = 6
+    total_w = num_players * pawn_w + (num_players - 1) * gap
+    start_x = -total_w // 2 + pawn_w // 2
     for i in range(num_players):
         p = players[i]
         city = city_objects[p.city]
         x, y = city.location
-        offset_x = x + (i * 10) - 22.5
+        offset_x = x + start_x + i * (pawn_w + gap)
         offset_y = y + 30
-        pygame.draw.rect(screen, p.colour, (offset_x, offset_y, 15, 15))
-        pygame.draw.rect(screen, (0, 0, 0), (offset_x, offset_y, 15, 15), 1)
+        fill = ROLE_ACCENT.get(type(p).__name__, (80, 120, 160))
+        r = pygame.Rect(offset_x, offset_y, 15, 15)
+        pygame.draw.rect(screen, fill, r, border_radius=3)
+        border_w = 2 if i == current_idx else 1
+        border_color = (255, 255, 255) if i == current_idx else (55, 70, 90)
+        pygame.draw.rect(screen, border_color, r, border_w, border_radius=3)
 
 turn = 0
 target = None
@@ -389,107 +414,148 @@ def player_test():
             active_player.draw_cards(Pandemic_Game.city_cards, Pandemic_Game)
                 
 def player_cards_display():
-    screen.fill((0,0,0))
+    screen.fill(DARK_BG)
 
     card_width = 120
     card_height = 70
     card_spacing = 12
     cards_per_row = 4
+    panel_pad = 24
+    title_bar_h = 52
+    avatar_r = 44
+    top_header = 80
 
     mouse_pos = pygame.mouse.get_pos()
 
+    title_surf = smallGunfont.render("PLAYER CARDS", True, TEXT_MUTED)
+    title_top = 24
+    screen.blit(title_surf, (width // 2 - title_surf.get_width() // 2, title_top))
+
     for i, player in enumerate(players):
-        x, y, w, h = (i%2)*(width/2), (i//2)*(height/2), width/2, height/2
+        px = (i % 2) * (width // 2)
+        py = top_header + (i // 2) * ((height - top_header) // 2)
+        pw = width // 2
+        ph = (height - top_header) // 2
 
-        pygame.draw.rect(screen, player.colour, (x, y, w, h))
-        pygame.draw.circle(screen, (100,100,100), (int(x+80), int(y+80)), 60)
+        role_name = type(player).__name__.replace("_", " ")
+        accent = ROLE_ACCENT.get(type(player).__name__, (80, 120, 160))
 
-        role_txt = smallGunfont.render(type(player).__name__, True, (0,0,0))
-        screen.blit(role_txt, (x+150, y+60))
+        panel_rect = pygame.Rect(px + panel_pad, py + panel_pad + 36, pw - 2 * panel_pad, ph - 2 * panel_pad - 36)
+        pygame.draw.rect(screen, CARD_BG, panel_rect, border_radius=12)
+        pygame.draw.rect(screen, (accent[0] // 2, accent[1] // 2, accent[2] // 2), panel_rect, 2, border_radius=12)
 
+        bar_rect = pygame.Rect(px + panel_pad, py + panel_pad + 36, pw - 2 * panel_pad, title_bar_h)
+        pygame.draw.rect(screen, accent, bar_rect)
+        avatar_cx = px + panel_pad + 12 + avatar_r
+        avatar_cy = py + panel_pad + 36 + title_bar_h // 2
+        pygame.draw.circle(screen, (30, 40, 55), (int(avatar_cx), int(avatar_cy)), avatar_r)
+        pygame.draw.circle(screen, accent, (int(avatar_cx), int(avatar_cy)), avatar_r, 3)
+
+        role_txt = smallGunfont.render(role_name.upper(), True, (255, 255, 255))
+        role_rect = role_txt.get_rect(midleft=(int(avatar_cx) + avatar_r + 14, bar_rect.centery))
+        screen.blit(role_txt, role_rect)
+
+    
         total_cards = len(player.cards)
         if total_cards > 0:
-            total_width = min(total_cards, cards_per_row)*(card_width+card_spacing)-card_spacing
-            start_x = x + (w-total_width)//2
+            start_y = py + panel_pad + 36 + title_bar_h + 20
+            row_width = min(total_cards, cards_per_row) * (card_width + card_spacing) - card_spacing
+            start_x = px + (pw - row_width) // 2
 
             for j, card in enumerate(player.cards):
                 row = j // cards_per_row
                 col = j % cards_per_row
-
-                card_x = start_x + col*(card_width+card_spacing)
-                card_y = y + 160 + row*(card_height+card_spacing)
+                card_x = start_x + col * (card_width + card_spacing)
+                card_y = start_y + row * (card_height + card_spacing)
 
                 rect = pygame.Rect(card_x, card_y, card_width, card_height)
-
-                if rect.collidepoint(mouse_pos):
-                    rect.y -= 8
+                hover = rect.collidepoint(mouse_pos)
+                if hover:
+                    rect = rect.inflate(4, 4)
+                    card_x, card_y = rect.x, rect.y
 
                 if card in city_objects:
                     top_colour = get_colour(city_objects[card].colour)
                 else:
-                    top_colour = (200,200,200)
+                    top_colour = (100, 120, 140)
 
-                pygame.draw.rect(screen, (235,235,235), rect, border_radius=10)
-                pygame.draw.rect(screen, top_colour, (rect.x, rect.y, card_width, 14), border_radius=10)
-                pygame.draw.rect(screen, (0,0,0), rect, 2, border_radius=10)
-
-                txt = cityfont.render(str(card), True, (0,0,0))
-                screen.blit(txt, (rect.x+8, rect.y+28))
+                card_r = 10
+                pygame.draw.rect(screen, (55, 70, 90), rect, border_radius=card_r)
+                top_bar = pygame.Rect(rect.x, rect.y, rect.width, 16)
+                pygame.draw.rect(screen, top_colour, top_bar, border_radius=card_r)
+                pygame.draw.rect(screen, accent, rect, 2, border_radius=card_r)
+                txt = cityfont.render(str(card), True, TEXT_WHITE)
+                screen.blit(txt, (rect.x + 10, rect.y + 26))
+        else:
+            no_cards = cityfont.render("No city cards", True, TEXT_MUTED)
+            cx = px + pw // 2 - no_cards.get_width() // 2
+            cy = py + panel_pad + 36 + title_bar_h + 80
+            screen.blit(no_cards, (cx, cy))
 
 def draw_current_player_panel():
     panel_x = width - 200
     panel_width = 200
     panel_height = height
-    pygame.draw.rect(screen, (20, 20, 40), (panel_x, 0, panel_width, panel_height))
+    pygame.draw.rect(screen, DARK_BG, (panel_x, 0, panel_width, panel_height))
+    accent = ROLE_ACCENT.get(type(players[turn % num_players]).__name__, (80, 120, 160))
+    pygame.draw.rect(screen, (accent[0] // 2, accent[1] // 2, accent[2] // 2), (panel_x, 0, 2, panel_height))
 
     active_player = players[turn % num_players]
 
-    name_surface = tinyGunfont.render(active_player.name, True, active_player.colour)
-    role_surface = tinyGunfont.render(type(active_player).__name__, True, (255, 255, 255))
-    screen.blit(name_surface, (panel_x + 10, 20))
-    screen.blit(role_surface, (panel_x + 10, 60))
+    name_surface = tinyGunfont.render(active_player.name, True, TEXT_WHITE)
+    role_surface = tinyGunfont.render(type(active_player).__name__.replace("_", " "), True, accent)
+    screen.blit(name_surface, (panel_x + 12, 16))
+    screen.blit(role_surface, (panel_x + 12, 52))
 
-    actions_surface = tinyGunfont.render(f"Actions: {active_player.actions}", True, (255, 255, 255))
-    screen.blit(actions_surface, (panel_x + 10, 100))
+    actions_surface = tinyGunfont.render(f"Actions: {active_player.actions}", True, TEXT_MUTED)
+    screen.blit(actions_surface, (panel_x + 12, 92))
 
     card_width = 160
     card_height = 60
     spacing = 10
-    start_y = 150
+    start_y = 130
     for i, card in enumerate(active_player.cards):
-        rect = pygame.Rect(panel_x + 20, start_y + i*(card_height + spacing), card_width, card_height)
-        pygame.draw.rect(screen, (235,235,235), rect, border_radius=8)
+        rect = pygame.Rect(panel_x + 20, start_y + i * (card_height + spacing), card_width, card_height)
+        panel_card_r = 8
+        pygame.draw.rect(screen, CARD_BG, rect, border_radius=panel_card_r)
         if card in city_objects:
             top_colour = get_colour(city_objects[card].colour)
         else:
-            top_colour = (200,200,200)
-        pygame.draw.rect(screen, top_colour, (rect.x, rect.y, card_width, 14), border_radius=8)
-        pygame.draw.rect(screen, (0,0,0), rect, 2, border_radius=8)
-        card_text = cityfont.render(str(card), True, (0,0,0))
-        screen.blit(card_text, (rect.x + 8, rect.y + 20))
+            top_colour = (100, 120, 140)
+        top_bar = pygame.Rect(rect.x, rect.y, card_width, 12)
+        pygame.draw.rect(screen, top_colour, top_bar, border_radius=panel_card_r)
+        pygame.draw.rect(screen, accent, rect, 2, border_radius=panel_card_r)
+        card_text = cityfont.render(str(card), True, TEXT_WHITE)
+        screen.blit(card_text, (rect.x + 10, rect.y + 22))
 
 def draw_movement_highlights():
     global turn, players, num_players, city_objects
-    if not players: return
-    
+    if not players:
+        return
     active_player = players[turn % num_players]
     current_city_obj = city_objects[active_player.city]
-    
+    accent = ROLE_ACCENT.get(type(active_player).__name__, (80, 120, 160))
     for name, city in city_objects.items():
         h_color = None
-
         if name == active_player.city and city.virus > 0:
-            h_color = (255, 255, 255)
-        elif name in current_city_obj.connections: 
-            h_color = (0, 255, 0)
-        elif current_city_obj.research_center and city.research_center and name != active_player.city: 
-            h_color = (200, 0, 255)
-        elif name in active_player.cards: 
-            h_color = (0, 200, 255)
-        elif active_player.city in active_player.cards and name != active_player.city: 
-            h_color = (255, 255, 0)
-        if h_color:
-            pygame.draw.circle(screen, h_color, city.location, 18, 3)
+            h_color = accent
+        elif name in current_city_obj.connections:
+            h_color = accent
+        elif current_city_obj.research_center and city.research_center and name != active_player.city:
+            h_color = accent
+        elif name in active_player.cards:
+            h_color = accent
+        elif active_player.city in active_player.cards and name != active_player.city:
+            h_color = accent
+        if h_color is not None:
+            cx, cy = city.location
+            glow_r, glow_w = 21, 2
+            glow_color = ((h_color[0] + DARK_BG[0]) // 2, (h_color[1] + DARK_BG[1]) // 2, (h_color[2] + DARK_BG[2]) // 2)
+            pygame.draw.circle(screen, glow_color, (cx, cy), glow_r, glow_w)
+            base_r, base_w = 19, 4
+            pygame.draw.circle(screen, (55, 70, 90), (cx, cy), base_r, base_w)
+            main_r, main_w = 17, 3
+            pygame.draw.circle(screen, h_color, (cx, cy), main_r, main_w)
 
 running = True
 clock = pygame.time.Clock()
