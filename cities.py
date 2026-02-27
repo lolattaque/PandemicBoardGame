@@ -1,4 +1,4 @@
-from players import quarantine_protects
+from players import quarantine_protects, COLOUR_INDEX
 
 class City:
     def __init__(self, name, connections, colour, location):
@@ -6,33 +6,46 @@ class City:
         self.location = location
         self.name = name
         self.colour = colour
-        self.virus = 0
+        self.virus = [0, 0, 0, 0]
         self.research_center = False
 
-    def outbreak(self, city_objects, board, players=None, visited=None):
+    def outbreak(self, city_objects, board, players=None, visited=None, source_idx=None):
         if visited is None:
             visited = set()
+
+        if source_idx is None:
+            source_idx = COLOUR_INDEX.get(self.colour, 0)
 
         if self.name in visited:
             return
 
-        if self.virus < 4:
+        if self.virus[source_idx] < 4:
             return
 
         visited.add(self.name)
         board.outbreak_counter += 1
-        self.virus = 3
+        self.virus[source_idx] = 3
+        if hasattr(board, "outbreak_animations"):
+            board.outbreak_animations.append({
+                "source": self.name,
+                "targets": [c for c in self.connections if c in city_objects],
+                "colour_idx": source_idx,
+                "progress": 0.0,
+                "alpha": 255,
+            })
 
         for connection in self.connections:
             neighbour = city_objects[connection]
             if players and quarantine_protects(neighbour.name, players, city_objects):
                 continue
-            neighbour.virus += 1
-            if neighbour.virus >= 4:
-                neighbour.outbreak(city_objects, board, players, visited)
+            current = neighbour.virus[source_idx]
+            if current < 3:
+                neighbour.virus[source_idx] = current + 1
+            elif current == 3:
+                neighbour.outbreak(city_objects, board, players, visited, source_idx)
 
 city_list = {
-    # BLUE (Done)
+    # BLUE
     "San Francisco": {"connections": ["Chicago", "Tokyo", "Los Angeles", "Manila"], "colour": "Blue", "location": (100, 280)},
     "Chicago": {"connections": ["San Francisco", "Los Angeles", "Mexico City", "Atlanta", "Montreal"], "colour": "Blue", "location": (205, 250)},
     "Atlanta": {"connections": ["Chicago", "Miami", "Washington"], "colour": "Blue", "location": (235, 310)},

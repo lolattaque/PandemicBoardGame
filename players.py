@@ -1,7 +1,6 @@
 COLOUR_INDEX = {"Blue": 0, "Yellow": 1, "Black": 2, "Red": 3}
 MAX_RESEARCH_STATIONS = 6
 
-
 class Player:
     def __init__(self, name, colour, total, city_cards, board):
         self.cards = []
@@ -87,17 +86,16 @@ class Player:
     def treat_disease(self, colour, city_objects, board):
         if self.actions > 0:
             current = city_objects.get(self.city)
-            if current and current.colour == colour and current.virus > 0:
-                idx = COLOUR_INDEX.get(colour)
-                if idx is not None:
-                    if board.cures[idx]:
-                        current.virus = 0
-                        total = sum(c.virus for c in city_objects.values() if c.colour == colour)
-                        if total == 0:
-                            board.eradicated[idx] = True
-                    else:
-                        current.virus -= 1
-                    self.actions -= 1
+            idx = COLOUR_INDEX.get(colour)
+            if current and current.colour == colour and idx is not None and current.virus[idx] > 0:
+                if board.cures[idx]:
+                    current.virus[idx] = 0
+                    total = sum(c.virus[idx] for c in city_objects.values() if c.colour == colour)
+                    if total == 0:
+                        board.eradicated[idx] = True
+                else:
+                    current.virus[idx] -= 1
+                self.actions -= 1
 
     def share_knowledge(self, other_player, card, give, city_objects):
         if self.actions > 0 and other_player.city == self.city:
@@ -124,7 +122,7 @@ class Player:
                             self.cards.remove(c)
                             board.player_discard_pile.append(c)
                         board.cures[idx] = True
-                        total_cubes = sum(city.virus for city in city_objects.values() if city.colour == colour)
+                        total_cubes = sum(city.virus[idx] for city in city_objects.values() if city.colour == colour)
                         if total_cubes == 0:
                             board.eradicated[idx] = True
                         self.actions -= 1
@@ -185,10 +183,10 @@ class Medic(Player):
     def treat_disease(self, colour, city_objects, board):
         if self.actions > 0:
             current = city_objects.get(self.city)
-            if current and current.colour == colour and current.virus > 0:
-                idx = COLOUR_INDEX.get(colour)
-                current.virus = 0
-                total = sum(c.virus for c in city_objects.values() if c.colour == colour)
+            idx = COLOUR_INDEX.get(colour)
+            if current and current.colour == colour and idx is not None and current.virus[idx] > 0:
+                current.virus[idx] = 0
+                total = sum(c.virus[idx] for c in city_objects.values() if c.colour == colour)
                 if total == 0:
                     board.eradicated[idx] = True
                 self.actions -= 1
@@ -196,9 +194,9 @@ class Medic(Player):
     def auto_remove_cured_cubes(self, city_objects, board):
         current = city_objects.get(self.city)
         idx = COLOUR_INDEX.get(current.colour)
-        if board.cures[idx] and current.virus > 0:
-            current.virus = 0
-            total = sum(c.virus for c in city_objects.values() if c.colour == current.colour)
+        if board.cures[idx] and current.virus[idx] > 0:
+            current.virus[idx] = 0
+            total = sum(c.virus[idx] for c in city_objects.values() if c.colour == current.colour)
             if total == 0:
                 board.eradicated[idx] = True
 
@@ -215,7 +213,7 @@ class Scientist(Player):
                             self.cards.remove(c)
                             board.player_discard_pile.append(c)
                         board.cures[idx] = True
-                        total_cubes = sum(city.virus for city in city_objects.values() if city.colour == colour)
+                        total_cubes = sum(city.virus[idx] for city in city_objects.values() if city.colour == colour)
                         if total_cubes == 0:
                             board.eradicated[idx] = True
                         self.actions -= 1

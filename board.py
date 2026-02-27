@@ -1,5 +1,5 @@
 import random
-from players import quarantine_protects
+from players import quarantine_protects, COLOUR_INDEX
 
 class Board:
     def __init__(self, city_objects, difficulty):
@@ -15,6 +15,7 @@ class Board:
 
         self.shuffle_infection_deck()
         random.shuffle(self.city_cards)
+        self.outbreak_animations = []
 
     def add_epidemic_card(self):
         for i in range (self.difficulty):
@@ -41,7 +42,9 @@ class Board:
             cubes = 3 - i
             for city in range (3):
                 city_name = self.draw_infection_card()
-                city_objects[city_name].virus = cubes
+                city_obj = city_objects[city_name]
+                idx = COLOUR_INDEX.get(city_obj.colour, 0)
+                city_obj.virus[idx] = cubes
                 
     def infect_virus(self, city_objects, players=None):
         for i in range(self.infection_rate):
@@ -49,8 +52,7 @@ class Board:
             city = city_objects[city_name]
             if players and quarantine_protects(city_name, players, city_objects):
                 continue
-            city.virus += 1
-            if city.virus >= 4:
-                city.outbreak(city_objects, self, players)
-                
-
+            idx = COLOUR_INDEX.get(city.colour, 0)
+            city.virus[idx] += 1
+            if city.virus[idx] >= 4:
+                city.outbreak(city_objects, self, players, source_idx=idx)
