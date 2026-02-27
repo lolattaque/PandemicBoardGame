@@ -8,7 +8,7 @@ from board import Board
 pygame.init()
 
 largefont = pygame.font.SysFont("arial", 60)
-smallfont = pygame.font.SysFont("arial", 40)  
+smallfont = pygame.font.SysFont("arial", 40)
 cityfont = pygame.font.SysFont("arial", 12, bold=True)
 
 largeGunfont = pygame.font.Font("Gunplay.ttf", 100)
@@ -71,8 +71,8 @@ ROLE_ACCENT = {
     "Researcher": (230, 185, 125),
     "Scientist": (200, 55, 55),
 }
-DARK_BG = (26, 32, 44)           
-CARD_BG = (40, 52, 70)           
+DARK_BG = (26, 32, 44) 
+CARD_BG = (40, 52, 70)
 TEXT_WHITE = (240, 244, 248)
 TEXT_MUTED = (160, 174, 192)
 
@@ -362,19 +362,19 @@ action_buttons = {}
 
 def draw_action_button(rect, label, enabled, accent, hover):
     if not enabled:
-        bg     = (30, 38, 52)
+        bg = (30, 38, 52)
         border = (55, 65, 80)
         text_col = (80, 90, 105)
     elif hover:
-        bg     = (min(accent[0]//2+40,255), min(accent[1]//2+40,255), min(accent[2]//2+40,255))
+        bg = (min(accent[0]//2+40,255), min(accent[1]//2+40,255), min(accent[2]//2+40,255))
         border = accent
         text_col = (255, 255, 255)
     else:
-        bg     = (accent[0]//3, accent[1]//3, accent[2]//3)
+        bg = (accent[0]//3, accent[1]//3, accent[2]//3)
         border = (accent[0]//2+20, accent[1]//2+20, accent[2]//2+20)
         text_col = (200, 210, 220)
 
-    pygame.draw.rect(screen, bg,     rect, border_radius=7)
+    pygame.draw.rect(screen, bg, rect, border_radius=7)
     pygame.draw.rect(screen, border, rect, 2, border_radius=7)
 
     shine_surf = pygame.Surface((rect.width - 4, rect.height // 3), pygame.SRCALPHA)
@@ -642,8 +642,8 @@ def draw_share_popup():
     pop_y = height // 2 - pop_h // 2
     pop_rect = pygame.Rect(pop_x, pop_y, pop_w, pop_h)
 
-    pygame.draw.rect(screen, DARK_BG,  pop_rect, border_radius=12)
-    pygame.draw.rect(screen, accent,   pop_rect, 2, border_radius=12)
+    pygame.draw.rect(screen, DARK_BG, pop_rect, border_radius=12)
+    pygame.draw.rect(screen, accent, pop_rect, 2, border_radius=12)
 
     title = smallGunfont.render("SHARE KNOWLEDGE", True, TEXT_WHITE)
     screen.blit(title, title.get_rect(centerx=pop_rect.centerx, top=pop_y + 18))
@@ -679,8 +679,7 @@ def draw_share_popup():
         share_popup["rects"][f"take_{i}"] = (take_rect, other, can_take_cards, False)
 
     cancel_rect = pygame.Rect(pop_rect.centerx - 60, pop_y + pop_h - 54, 120, 36)
-    draw_action_button(cancel_rect, "CANCEL", True, (100, 100, 110),
-                       cancel_rect.collidepoint(mx, my))
+    draw_action_button(cancel_rect, "CANCEL", True, (100, 100, 110), cancel_rect.collidepoint(mx, my))
     share_popup["rects"]["cancel"] = (cancel_rect, None, None, None)
 
 def draw_discard_popup():
@@ -694,23 +693,23 @@ def draw_discard_popup():
     overlay.fill((0, 0, 0, 180))
     screen.blit(overlay, (0, 0))
 
-    n_cards   = len(player.cards)
-    board_cx  = (width - 200) / 2
+    n_cards = len(player.cards)
+    board_cx = (width - 200) / 2
     max_pop_w = 860
-    card_gap  = 10
-    pad       = 32
+    card_gap = 10
+    pad = 32
 
-    per_row   = min(n_cards, max(1, (max_pop_w - pad * 2 + card_gap) // (100 + card_gap)))
-    rows      = math.ceil(n_cards / per_row)
-    card_w    = min(100, (max_pop_w - pad * 2 - card_gap * (per_row - 1)) // per_row)
-    card_h    = int(card_w * 1.1)
-    pop_w     = pad * 2 + per_row * card_w + (per_row - 1) * card_gap
-    title_h   = 66
-    row_h     = card_h + card_gap
-    pop_h     = title_h + rows * row_h + pad
-    pop_x     = board_cx - pop_w // 2
-    pop_y     = height // 2 - pop_h // 2
-    pop_rect  = pygame.Rect(pop_x, pop_y, pop_w, pop_h)
+    per_row = min(n_cards, max(1, (max_pop_w - pad * 2 + card_gap) // (100 + card_gap)))
+    rows = math.ceil(n_cards / per_row)
+    card_w = min(100, (max_pop_w - pad * 2 - card_gap * (per_row - 1)) // per_row)
+    card_h = int(card_w * 1.1)
+    pop_w = pad * 2 + per_row * card_w + (per_row - 1) * card_gap
+    title_h = 66
+    row_h = card_h + card_gap
+    pop_h = title_h + rows * row_h + pad
+    pop_x = board_cx - pop_w // 2
+    pop_y = height // 2 - pop_h // 2
+    pop_rect = pygame.Rect(pop_x, pop_y, pop_w, pop_h)
 
     pygame.draw.rect(screen, DARK_BG, pop_rect, border_radius=12)
     pygame.draw.rect(screen, (200, 60, 60), pop_rect, 2, border_radius=12)
@@ -728,8 +727,8 @@ def draw_discard_popup():
     for i, card in enumerate(player.cards):
         row = i // per_row
         col = i % per_row
-        cx  = cards_start_x + col * (card_w + card_gap)
-        cy  = cards_start_y + row * row_h
+        cx = cards_start_x + col * (card_w + card_gap)
+        cy = cards_start_y + row * row_h
         crect = pygame.Rect(cx, cy, card_w, card_h)
         hover = crect.collidepoint(mx, my)
         top_colour = get_colour(city_objects[card].colour) if card in city_objects else (100, 120, 140)
@@ -741,7 +740,7 @@ def draw_discard_popup():
         pygame.draw.rect(screen, border_col, crect, 2, border_radius=7)
         words = card.split()
         lines = []
-        line  = ""
+        line = ""
         for w in words:
             test = (line + " " + w).strip()
             if cityfont.size(test)[0] <= card_w - 8:
@@ -820,24 +819,20 @@ def draw_current_player_panel():
 
     current_city = city_objects[active_player.city]
 
-    can_treat   = any(v > 0 for v in current_city.virus)
-    can_build   = (active_player.city in active_player.cards and
-                   not current_city.research_center)
-    can_cure    = (current_city.research_center and
-                   len([c for c in active_player.cards
-                        if c in city_objects and
-                        city_objects[c].colour == current_city.colour]) >= 5)
+    can_treat = any(v > 0 for v in current_city.virus)
+    can_build = (active_player.city in active_player.cards and not current_city.research_center)
+    can_cure = (current_city.research_center and len([c for c in active_player.cards if c in city_objects and city_objects[c].colour == current_city.colour]) >= 5)
     others_here = [p for p in players if p != active_player and p.city == active_player.city]
-    can_share   = bool(others_here)
+    can_share = bool(others_here)
 
     can_skip = active_player.actions > 0
 
     buttons = [
-        ("treat",  "TREAT",    can_treat),
-        ("build",  "BUILD RC", can_build),
-        ("cure",   "CURE",     can_cure),
-        ("share",  "SHARE",    can_share),
-        ("skip",   "SKIP",     can_skip),
+        ("treat", "TREAT", can_treat),
+        ("build", "BUILD RC", can_build),
+        ("cure", "CURE", can_cure),
+        ("share", "SHARE", can_share),
+        ("skip", "SKIP", can_skip),
     ]
 
     action_buttons = {}
