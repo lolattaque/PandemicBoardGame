@@ -457,13 +457,19 @@ def player_test(click_event=None):
                     active_player.build_research_station(city_objects, Pandemic_Game)
 
                 elif btn_key == "cure":
-                    colour_cards = [c for c in active_player.cards
-                                    if c in city_objects and
-                                    city_objects[c].colour == current_city.colour]
-                    active_player.discover_cure(current_city.colour, colour_cards, city_objects, Pandemic_Game)
-                    for p in players:
-                        if isinstance(p, Medic):
-                            p.auto_remove_cured_cubes(city_objects, Pandemic_Game)
+                    colour_counts = {}
+                    for c in active_player.cards:
+                        if c in city_objects:
+                            col = city_objects[c].colour
+                            colour_counts.setdefault(col, []).append(c)
+                    cure_colour = next(
+                        (col for col, cards in colour_counts.items()
+                         if len(cards) >= active_player.require_to_cure and not Pandemic_Game.cures[["Blue","Yellow","Black","Red"].index(col)]),
+                        None
+                    )
+                    if cure_colour:
+                        cards_to_discard = colour_counts[cure_colour][:active_player.require_to_cure]
+                        active_player.discover_cure(cure_colour, cards_to_discard, city_objects, Pandemic_Game)
 
                 elif btn_key == "share":
                     others = [p for p in players if p != active_player and p.city == active_player.city]
@@ -821,7 +827,15 @@ def draw_current_player_panel():
 
     can_treat = any(v > 0 for v in current_city.virus)
     can_build = (active_player.city in active_player.cards and not current_city.research_center)
-    can_cure = (current_city.research_center and len([c for c in active_player.cards if c in city_objects and city_objects[c].colour == current_city.colour]) >= 5)
+    colour_counts = {}
+    for c in active_player.cards:
+        if c in city_objects:
+            col = city_objects[c].colour
+            colour_counts[col] = colour_counts.get(col, 0) + 1
+    can_cure = current_city.research_center and any(
+        count >= active_player.require_to_cure and not Pandemic_Game.cures[["Blue","Yellow","Black","Red"].index(col)]
+        for col, count in colour_counts.items()
+    )
     others_here = [p for p in players if p != active_player and p.city == active_player.city]
     can_share = bool(others_here)
 
