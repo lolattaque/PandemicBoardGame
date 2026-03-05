@@ -357,8 +357,10 @@ turn = 0
 target = None
 dispatcher_move_other = None
 dispatcher_occupied_mode = False
+dispatcher_occupied_pawn = None
 
 share_popup = None
+occupy_popup = None
 discard_popup = None
 pending_end_turn = False
 
@@ -450,8 +452,8 @@ def end_turn(player):
 
 
 def player_test(click_event=None):
-    global turn, target, dispatcher_move_other, dispatcher_occupied_mode
-    global share_popup, discard_popup, pending_end_turn
+    global turn, target, dispatcher_move_other, dispatcher_occupied_mode, dispatcher_occupied_pawn
+    global share_popup, discard_popup, occupy_popup, pending_end_turn
     mouse_pos = pygame.mouse.get_pos()
     keys = pygame.key.get_pressed()
     active_player = players[turn % num_players]
@@ -467,6 +469,21 @@ def player_test(click_event=None):
                     else:
                         discard_popup = None
                         pending_end_turn = False
+                    break
+        return
+
+    if occupy_popup is not None:
+        if click_event and occupy_popup.get("rects"):
+            for key, val in occupy_popup["rects"].items():
+                rect, chosen_player = val
+                if rect.collidepoint(mouse_pos):
+                    if key == "cancel":
+                        occupy_popup = None
+                        dispatcher_occupied_mode = False
+                        dispatcher_occupied_pawn = None
+                    elif chosen_player is not None:
+                        dispatcher_occupied_pawn = chosen_player
+                        occupy_popup = None
                     break
         return
 
@@ -524,6 +541,12 @@ def player_test(click_event=None):
                     if active_player.actions > 0:
                         active_player.actions -= 1
 
+                elif btn_key == "dispatcher_occupy":
+                    if isinstance(active_player, Dispatcher) and active_player.actions > 0:
+                        dispatcher_occupied_mode = True
+                        dispatcher_occupied_pawn = None
+                        occupy_popup = {"rects": {}}
+
                 break
 
     if isinstance(active_player, Dispatcher):
@@ -536,13 +559,13 @@ def player_test(click_event=None):
         for city_name, city in city_objects.items():
             dist = ((mouse_pos[0] - city.location[0])**2 + (mouse_pos[1] - city.location[1])**2)**0.5
             if dist < 20:
-                if dispatcher_occupied_mode and isinstance(active_player, Dispatcher):
+                if dispatcher_occupied_mode and isinstance(active_player, Dispatcher) and dispatcher_occupied_pawn is not None:
                     in_city = [p for p in players if p.city == city_name]
-                    not_in_city = [p for p in players if p.city != city_name]
-                    if in_city and not_in_city and active_player.actions > 0:
-                        active_player.dispatcher_move_pawn_to_occupied_city(not_in_city[0], city_name, city_objects, players)
-                    dispatcher_occupied_mode = False
-                    moved_or_acted = True
+                    if in_city and dispatcher_occupied_pawn.city != city_name and active_player.actions > 0:
+                        active_player.dispatcher_move_pawn_to_occupied_city(dispatcher_occupied_pawn, city_name, city_objects, players)
+                        dispatcher_occupied_mode = False
+                        dispatcher_occupied_pawn = None
+                        moved_or_acted = True
                 else:
                     mover = dispatcher_move_other if (isinstance(active_player, Dispatcher) and dispatcher_move_other is not None) else active_player
                     current_city_obj = city_objects[mover.city]
@@ -732,6 +755,50 @@ def draw_share_popup():
     draw_action_button(cancel_rect, "CANCEL", True, (100, 100, 110), cancel_rect.collidepoint(mx, my))
     share_popup["rects"]["cancel"] = (cancel_rect, None, None, None)
 
+def draw_occupy_popup():
+    global occupy_popup
+    if occupy_popup is None:
+        return
+
+    mx, my = pygame.mouse.get_pos() # Get the mouse position
+    active_player = players[turn % num_players] # Get the active player
+    accent = ROLE_ACCENT.get(type(active_player).__name__, (80, 120, 160)) # Get the accent color for the active player
+
+    others = [p for p in players if p != active_player]
+    row_h = 72
+    pop_w = 380
+    pop_h = 140 + len(others) * row_h
+
+    board_cx = (width - 200) // 2
+    pop_x = board_cx - pop_w // 2
+    pop_y = height // 2 - pop_h // 2
+    pop_rect = pygame.Rect(pop_x, pop_y, pop_w, pop_h)
+
+    overlay = pygame.Surface((width, height), pygame.SRCALPHA) # Create an overlay surface
+    overlay.fill((0, 0, 0, 160)) # Fill the overlay with a semi-transparent black color
+    screen.blit(overlay, (0, 0))
+
+    pygame.draw.rect(screen, DARK_BG, pop_rect, border_radius=12)
+    pygame.draw.rect(screen, accent, pop_rect, 2, border_radius=12)
+
+    title = tinyGunfont.render("SELECT PAWN TO MOVE", True, TEXT_WHITE)
+    screen.blit(title, title.get_rect(centerx=pop_rect.centerx, top=pop_y + 22))
+
+    occupy_popup["rects"] = {} # Initialize the rects dictionary
+    btn_w, btn_h = 200, 40 # Set the width and height of the buttons
+    row_start_y = pop_y + 64 
+    for i, other in enumerate(others):
+        other_accent = ROLE_ACCENT.get(type(other).__name__, (80, 120, 160))
+        name_surf = tinyGunfont.render(other.name, True, other_accent)
+        screen.blit(name_surf, name_surf.get_rect(centerx=pop_rect.centerx, top=row_start_y + i * row_h + 4))
+        btn_rect = pygame.Rect(pop_rect.centerx - btn_w // 2, row_start_y + i * row_h + 28, btn_w, btn_h)
+        draw_action_button(btn_rect, "MOVE THIS PAWN", True, other_accent, btn_rect.collidepoint(mx, my))
+        occupy_popup["rects"][f"player_{i}"] = (btn_rect, other)
+
+    cancel_rect = pygame.Rect(pop_rect.centerx - 60, pop_y + pop_h - 50, 120, 36)
+    draw_action_button(cancel_rect, "CANCEL", True, (100, 100, 110), cancel_rect.collidepoint(mx, my))
+    occupy_popup["rects"]["cancel"] = (cancel_rect, None)
+
 def draw_discard_popup():
     global discard_popup
     if discard_popup is None:
@@ -859,13 +926,10 @@ def draw_current_player_panel():
         card_text = cityfont.render(str(card), True, TEXT_WHITE)
         screen.blit(card_text, (crect.x + 8, crect.y + 16))
 
-    div_y = height - 230
-    pygame.draw.rect(screen, (45, 57, 75), pygame.Rect(panel_x + 10, div_y, panel_width - 20, 1))
     btn_w = 170
     btn_h = 36
     btn_x = panel_x + 14
     btn_gap = 8
-    btn_start_y = div_y + 10
 
     current_city = city_objects[active_player.city]
 
@@ -893,6 +957,14 @@ def draw_current_player_panel():
         ("skip", "SKIP", can_skip),
     ]
 
+    if isinstance(active_player, Dispatcher) and active_player.actions > 0:
+        has_other = any(p != active_player for p in players)
+        buttons.append(("dispatcher_occupy", "OCCUPY", has_other))
+
+    div_y = height - 230 if len(buttons) <= 5 else height - 275
+    pygame.draw.rect(screen, (45, 57, 75), pygame.Rect(panel_x + 10, div_y, panel_width - 20, 1))
+    btn_start_y = div_y + 10
+
     action_buttons = {}
     for idx, (key, label, enabled) in enumerate(buttons):
         brect = pygame.Rect(btn_x, btn_start_y + idx * (btn_h + btn_gap), btn_w, btn_h)
@@ -901,24 +973,38 @@ def draw_current_player_panel():
         btn_accent = (90, 100, 115) if key == "skip" else accent
         draw_action_button(brect, label, enabled, btn_accent, hover)
 
+    if isinstance(active_player, Dispatcher):
+        mode_y = btn_start_y + len(buttons) * (btn_h + btn_gap) + 6
+        if dispatcher_occupied_mode and dispatcher_occupied_pawn is not None:
+            mode_txt = tinyGunfont.render(f"Move {dispatcher_occupied_pawn.name} → city w/ pawn", True, accent)
+            screen.blit(mode_txt, (btn_x, mode_y))
+        elif dispatcher_occupied_mode:
+            mode_txt = tinyGunfont.render("Select a player to move", True, accent)
+            screen.blit(mode_txt, (btn_x, mode_y))
+
 def draw_movement_highlights():
-    global turn, players, num_players, city_objects
+    global turn, players, num_players, city_objects, dispatcher_occupied_mode, dispatcher_occupied_pawn, dispatcher_move_other
     if not players:
         return
     active_player = players[turn % num_players]
-    current_city_obj = city_objects[active_player.city]
+    mover = dispatcher_move_other if (isinstance(active_player, Dispatcher) and dispatcher_move_other is not None) else active_player
+    current_city_obj = city_objects[mover.city]
     accent = ROLE_ACCENT.get(type(active_player).__name__, (80, 120, 160))
     for name, city in city_objects.items():
         h_color = None
-        if name == active_player.city and any(v > 0 for v in city.virus):
+        if dispatcher_occupied_mode and isinstance(active_player, Dispatcher) and dispatcher_occupied_pawn is not None:
+            someone_there = any(p.city == name for p in players)
+            if someone_there and name != dispatcher_occupied_pawn.city:
+                h_color = accent
+        elif name == mover.city and any(v > 0 for v in city.virus):
             h_color = accent
         elif name in current_city_obj.connections:
             h_color = accent
-        elif current_city_obj.research_center and city.research_center and name != active_player.city:
+        elif current_city_obj.research_center and city.research_center and name != mover.city:
             h_color = accent
         elif name in active_player.cards:
             h_color = accent
-        elif active_player.city in active_player.cards and name != active_player.city:
+        elif mover.city in active_player.cards and name != mover.city:
             h_color = accent
         if h_color is not None:
             cx, cy = city.location
@@ -1074,6 +1160,7 @@ while running:
         if not game_over:
             player_test(click_event)
             draw_share_popup()
+            draw_occupy_popup()
             draw_discard_popup()
         else:
             draw_result_screen()
