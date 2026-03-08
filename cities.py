@@ -1,4 +1,5 @@
-from players import quarantine_protects, COLOUR_INDEX
+import math
+from players import quarantine_protects, COLOUR_INDEX, Dispatcher
 
 class City:
     def __init__(self, name, connections, colour, location):
@@ -43,6 +44,112 @@ class City:
                 neighbour.virus[source_idx] = current + 1
             elif current == 3:
                 neighbour.outbreak(city_objects, board, players, visited, source_idx)
+
+def draw_connections(screen, city_objects, width, get_colour_fn):
+    import pygame
+    drawn_connections = set()
+    wrap_pairs = {
+        ("Los Angeles", "Sydney"),
+        ("Manila", "San Francisco"),
+        ("San Francisco", "Manila"),
+        ("San Francisco", "Tokyo"),
+    }
+
+    for city_name, city in city_objects.items():
+        start_pos = city.location
+        start_colour = get_colour_fn(city.colour)
+
+        for connection_name in city.connections:
+            if connection_name not in city_objects:
+                continue
+            pair = tuple(sorted((city_name, connection_name)))
+            if pair in drawn_connections:
+                continue
+
+            target_city = city_objects[connection_name]
+            end_pos = target_city.location
+            end_colour = get_colour_fn(target_city.colour)
+
+            if pair in wrap_pairs:
+                mid_y = (start_pos[1] + end_pos[1]) // 2
+                left_exit = (0, mid_y)
+                right_exit = (width - 200, mid_y)
+                if start_pos[0] < end_pos[0]:
+                    pygame.draw.line(screen, start_colour, start_pos, left_exit, 3)
+                    pygame.draw.line(screen, end_colour, right_exit, end_pos, 3)
+                else:
+                    pygame.draw.line(screen, start_colour, start_pos, right_exit, 3)
+                    pygame.draw.line(screen, end_colour, left_exit, end_pos, 3)
+            else:
+                mid_pos = ((start_pos[0] + end_pos[0]) / 2, (start_pos[1] + end_pos[1]) / 2)
+                pygame.draw.line(screen, start_colour, start_pos, mid_pos, 3)
+                pygame.draw.line(screen, end_colour, mid_pos, end_pos, 3)
+
+            drawn_connections.add(pair)
+
+
+def draw_cities(screen, city_objects, virus_angle, cityfont, get_colour_fn):
+    import pygame
+    for city in city_objects.values():
+        x, y = city.location
+        color = get_colour_fn(city.colour)
+
+        pygame.draw.circle(screen, (255, 255, 255), (x, y), 12)
+        pygame.draw.circle(screen, color, (x, y), 10)
+
+        city_txt = city.name + (" (R)" if city.research_center else "")
+        name_surface = cityfont.render(city_txt, True, (255, 255, 255))
+        name_rect = name_surface.get_rect(center=(x, y + 25))
+        bg_rect = name_rect.inflate(6, 3)
+        pygame.draw.rect(screen, (38, 48, 62), bg_rect, border_radius=4)
+        pygame.draw.rect(screen, (55, 70, 90), bg_rect, 1, border_radius=4)
+        screen.blit(name_surface, name_rect)
+
+        virus_colours = [(80, 130, 255), (230, 210, 40), (180, 180, 180), (240, 60, 60)]
+        cube_size, orbit_radius = 9, 22
+        cubes = [colour_idx for colour_idx, count in enumerate(city.virus) for _ in range(count)]
+        total = len(cubes)
+        if total > 0:
+            angle_step = (2 * math.pi) / total
+            for k, colour_idx in enumerate(cubes):
+                angle = virus_angle + k * angle_step
+                cx_off = int(x + orbit_radius * math.cos(angle))
+                cy_off = int(y + orbit_radius * math.sin(angle))
+                rect = pygame.Rect(cx_off - cube_size//2, cy_off - cube_size//2, cube_size, cube_size)
+                pygame.draw.rect(screen, virus_colours[colour_idx], rect, border_radius=3)
+                pygame.draw.rect(screen, (255, 255, 255), rect, 1, border_radius=3)
+
+
+def draw_movement_highlights(screen, players, city_objects, turn, num_players, dispatcher_occupied_mode=False, dispatcher_occupied_pawn=None, dispatcher_move_other=None):
+    import pygame
+    from players import ROLE_ACCENT
+    if not players:
+        return
+    active_player = players[turn % num_players]
+    mover = dispatcher_move_other if (isinstance(active_player, Dispatcher) and dispatcher_move_other is not None) else active_player
+    current_city_obj = city_objects[mover.city]
+    accent = ROLE_ACCENT.get(type(active_player).__name__, (80, 120, 160))
+
+    for name, city in city_objects.items():
+        h_color = None
+        if dispatcher_occupied_mode and isinstance(active_player, Dispatcher) and dispatcher_occupied_pawn is not None:
+            someone_there = any(p.city == name for p in players)
+            if someone_there and name != dispatcher_occupied_pawn.city:
+                h_color = accent
+        elif name == mover.city and any(v > 0 for v in city.virus):
+            h_color = accent
+        elif name in current_city_obj.connections:
+            h_color = accent
+        elif current_city_obj.research_center and city.research_center and name != mover.city:
+            h_color = accent
+        elif name in active_player.cards:
+            h_color = accent
+        elif mover.city in active_player.cards and name != mover.city:
+            h_color = accent
+        if h_color is not None:
+            cx, cy = city.location
+            pygame.draw.circle(screen, h_color, (cx, cy), 17, 3)
+
 
 city_list = {
     # BLUE
