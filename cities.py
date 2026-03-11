@@ -126,25 +126,30 @@ def draw_movement_highlights(screen, players, city_objects, turn, num_players, d
     if not players:
         return
     active_player = players[turn % num_players]
-    mover = dispatcher_move_other if (isinstance(active_player, Dispatcher) and dispatcher_move_other is not None) else active_player
+   
+    if dispatcher_occupied_mode and isinstance(active_player, Dispatcher) and dispatcher_occupied_pawn is not None:
+        mover = dispatcher_occupied_pawn
+    else:
+        mover = dispatcher_move_other if (isinstance(active_player, Dispatcher) and dispatcher_move_other is not None) else active_player
     current_city_obj = city_objects[mover.city]
     accent = ROLE_ACCENT.get(type(active_player).__name__, (80, 120, 160))
 
     for name, city in city_objects.items():
         h_color = None
+
         if dispatcher_occupied_mode and isinstance(active_player, Dispatcher) and dispatcher_occupied_pawn is not None:
-            someone_there = any(p.city == name for p in players)
-            if someone_there and name != dispatcher_occupied_pawn.city:
+            if any(p.city == name for p in players) and name != mover.city:
                 h_color = accent
-        elif name == mover.city and any(v > 0 for v in city.virus):
+
+        if h_color is None and name == mover.city and any(v > 0 for v in city.virus):
             h_color = accent
-        elif name in current_city_obj.connections:
+        elif h_color is None and name in current_city_obj.connections:
             h_color = accent
-        elif current_city_obj.research_center and city.research_center and name != mover.city:
+        elif h_color is None and current_city_obj.research_center and city.research_center and name != mover.city:
             h_color = accent
-        elif name in active_player.cards:
+        elif h_color is None and name in active_player.cards:
             h_color = accent
-        elif mover.city in active_player.cards and name != mover.city:
+        elif h_color is None and mover.city in active_player.cards and name != mover.city:
             h_color = accent
         if h_color is not None:
             cx, cy = city.location

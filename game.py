@@ -306,12 +306,36 @@ def player_test(click_event=None):
             dist = ((mouse_pos[0] - city.location[0])**2 + (mouse_pos[1] - city.location[1])**2)**0.5
             if dist < 20:
                 if dispatcher_occupied_mode and isinstance(active_player, Dispatcher) and dispatcher_occupied_pawn is not None:
-                    in_city = [p for p in players if p.city == city_name]
-                    if in_city and dispatcher_occupied_pawn.city != city_name and active_player.actions > 0:
-                        active_player.dispatcher_move_pawn_to_occupied_city(dispatcher_occupied_pawn, city_name, city_objects, players)
+                    mover = dispatcher_occupied_pawn
+                    if active_player.actions > 0:
+                        # Ability 1: move any pawn to any city containing another pawn
+                        in_city = [p for p in players if p.city == city_name]
+                        if in_city and mover.city != city_name:
+                            active_player.dispatcher_move_pawn_to_occupied_city(mover, city_name, city_objects, players)
+                            moved_or_acted = True
+                        else:
+                            # Ability 2: move another player's pawn as if it were your own
+                            current_city_obj = city_objects[mover.city]
+                            if city_name in current_city_obj.connections:
+                                active_player.drive_ferry(city_name, city_objects, move_pawn=mover)
+                                moved_or_acted = True
+                            elif city_name in active_player.cards:
+                                active_player.direct_flight(city_name, city_objects, Pandemic_Game, move_pawn=mover)
+                                moved_or_acted = True
+                            elif mover.city in active_player.cards:
+                                active_player.charter_flight(city_name, city_objects, Pandemic_Game, move_pawn=mover)
+                                moved_or_acted = True
+                            else:
+                                active_player.shuttle_flight(city_name, city_objects, move_pawn=mover)
+                                moved_or_acted = True
+
+                        if moved_or_acted and isinstance(mover, Medic):
+                            mover.auto_remove_cured_cubes(city_objects, Pandemic_Game)
+
+                    # After a successful move, exit occupy mode
+                    if moved_or_acted:
                         dispatcher_occupied_mode = False
                         dispatcher_occupied_pawn = None
-                        moved_or_acted = True
                 else:
                     mover = dispatcher_move_other if (isinstance(active_player, Dispatcher) and dispatcher_move_other is not None) else active_player
                     current_city_obj = city_objects[mover.city]
