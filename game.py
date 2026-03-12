@@ -1,9 +1,12 @@
 import pygame
 import random
-import math
-from players import Player, Medic, Scientist, Researcher, Operations_Expert, Dispatcher, Quarantine_Specialist, Contingency_Planner
-from cities import City, city_list
-from board import Board
+from players import (
+    Player, Medic, Scientist, Researcher, Operations_Expert, Dispatcher, Quarantine_Specialist, Contingency_Planner,
+    ROLE_ACCENT, DARK_BG, CARD_BG, TEXT_WHITE, TEXT_MUTED,
+    draw_players, draw_current_player_panel, player_cards_display, draw_share_popup, draw_occupy_popup, draw_discard_popup
+)
+from cities import City, city_list, draw_connections, draw_cities, draw_movement_highlights
+from board import Board, draw_board, draw_outbreak_animations, draw_result_screen
 
 pygame.init()
 
@@ -70,20 +73,6 @@ def get_colour(colour_str):
     elif colour_str == "Red":
         return (255, 0, 0)
     return (255, 255, 255)
-
-ROLE_ACCENT = {
-    "Contingency_Planner": (100, 195, 250),
-    "Operations_Expert": (170, 225, 105),
-    "Dispatcher": (205, 125, 235),
-    "Quarantine_Specialist": (50, 130, 58),
-    "Medic": (255, 152, 0),
-    "Researcher": (230, 185, 125),
-    "Scientist": (200, 55, 55),
-}
-DARK_BG = (26, 32, 44) 
-CARD_BG = (40, 52, 70)
-TEXT_WHITE = (240, 244, 248)
-TEXT_MUTED = (160, 174, 192)
 
 def loading_screen():
     global selected_index, selected_difficulty
@@ -156,72 +145,30 @@ def loading_screen():
     instr_surface = cityfont.render("PRESS ENTER TO START MISSION", True, (100, 100, 100))
     screen.blit(instr_surface, (width/2 - instr_surface.get_width()/2, height - 40))
 
-def draw_connections():
-    drawn_connections = set()
+def check_win_lose():
+    global game_over, game_won, lose_reason
 
-    wrap_pairs = {
-        ("San Francisco","Tokyo"),
-        ("San Francisco","Manila"),
-        ("Los Angeles","Sydney"),
-        ("Manila","San Francisco")
-    }
-
-    for city_name, city in city_objects.items():
-        start_pos = city.location
-        start_colour = get_colour(city.colour)
-
-        for connection_name in city.connections:
-            if connection_name not in city_objects:
-                continue
-
-            pair = tuple(sorted((city_name, connection_name)))
-            if pair in drawn_connections:
-                continue
-
-            target_city = city_objects[connection_name]
-            end_pos = target_city.location
-            end_colour = get_colour(target_city.colour)
-
-            if pair in wrap_pairs:
-                mid_y = (start_pos[1] + end_pos[1]) // 2
-                left_exit = (0, mid_y)
-                right_exit = (width-200, mid_y)
-
-                if start_pos[0] < end_pos[0]:
-                    pygame.draw.line(screen, start_colour, start_pos, left_exit, 3)
-                    pygame.draw.line(screen, end_colour, right_exit, end_pos, 3)
-                else:
-                    pygame.draw.line(screen, start_colour, start_pos, right_exit, 3)
-                    pygame.draw.line(screen, end_colour, left_exit, end_pos, 3)
-            else:
-                mid_x = (start_pos[0] + end_pos[0]) / 2
-                mid_y = (start_pos[1] + end_pos[1]) / 2
-                mid_pos = (mid_x, mid_y)
-
-                pygame.draw.line(screen, start_colour, start_pos, mid_pos, 3)
-                pygame.draw.line(screen, end_colour, mid_pos, end_pos, 3)
-
-            drawn_connections.add(pair)
-
-def draw_outbreak_animations():
-    if not hasattr(Pandemic_Game, "outbreak_animations"):
+    if all(Pandemic_Game.cures):
+        game_over = True
+        game_won = True
         return
 
-    virus_colours = [(80, 130, 255), (230, 210, 40), (180, 180, 180), (240, 60, 60)]
-    still_active = []
-    for anim in Pandemic_Game.outbreak_animations:
-        p = anim["progress"]
-        colour = virus_colours[anim["colour_idx"]]
-        src = city_objects[anim["source"]].location
-        alpha = max(0, int(255 * (1.0 - p)))
+    if Pandemic_Game.outbreak_counter >= 8:
+        game_over = True
+        game_won = False
+        lose_reason = "TOO MANY OUTBREAKS"
+        return
 
-        for target_name in anim["targets"]:
-            if target_name not in city_objects:
-                continue
-            dst = city_objects[target_name].location
-            tx = int(src[0] + (dst[0] - src[0]) * p)
-            ty = int(src[1] + (dst[1] - src[1]) * p)
+    colour_names = ["Blue", "Yellow", "Black", "Red"]
+    for idx, col in enumerate(colour_names):
+        total = sum(city_objects[n].virus[idx] for n in city_objects)
+        if total > 24:
+            game_over = True
+            game_won = False
+            lose_reason = f"NO {col.upper()} CUBES LEFT"
+            return
 
+<<<<<<< HEAD
             glow_surf = pygame.Surface((30, 30), pygame.SRCALPHA)
             glow_col = (*colour, max(0, alpha // 3))
             pygame.draw.circle(glow_surf, glow_col, (15, 15), 15)
@@ -395,21 +342,38 @@ def draw_action_button(rect, label, enabled, accent, hover):
 
     txt = tinyGunfont.render(label, True, text_col)
     screen.blit(txt, txt.get_rect(center=rect.center))
+=======
+    if not Pandemic_Game.city_cards:
+        game_over = True
+        game_won = False
+        lose_reason = "PLAYER DECK EXHAUSTED"
+        return
+>>>>>>> 4b75faa31ca4bff8413c05fe0f50e9fdec5aeaaf
 
 def end_turn(player):
     global turn, discard_popup, pending_end_turn
     if isinstance(player, Operations_Expert):
         player.ops_expert_special_move_used = False
     player.actions = 4
+
+    cards_drawn = 0
     for _ in range(2):
-        if Pandemic_Game.city_cards:
-            drawn = Pandemic_Game.city_cards.pop()
-            if drawn == "Infection Card":
-                Pandemic_Game.infection_rate += 1
-                Pandemic_Game.shuffle_infection_deck()
-            else:
-                player.cards.append(drawn)
+        if not Pandemic_Game.city_cards:
+            check_win_lose()
+            return
+        drawn = Pandemic_Game.city_cards.pop()
+        if drawn == "Infection Card":
+            Pandemic_Game.infection_rate += 1
+            Pandemic_Game.shuffle_infection_deck()
+        else:
+            player.cards.append(drawn)
+        cards_drawn += 1
+
     Pandemic_Game.infect_virus(city_objects, players)
+    check_win_lose()
+    if game_over:
+        return
+
     turn += 1
     for p in players:
         if len(p.cards) > 7:
@@ -419,9 +383,14 @@ def end_turn(player):
 
 
 def player_test(click_event=None):
+<<<<<<< HEAD
     global event_card_rects
     global turn, target, dispatcher_move_other, dispatcher_occupied_mode
     global share_popup, discard_popup, pending_end_turn
+=======
+    global turn, target, dispatcher_move_other, dispatcher_occupied_mode, dispatcher_occupied_pawn
+    global share_popup, discard_popup, occupy_popup, pending_end_turn
+>>>>>>> 4b75faa31ca4bff8413c05fe0f50e9fdec5aeaaf
     mouse_pos = pygame.mouse.get_pos()
     keys = pygame.key.get_pressed()
     active_player = players[turn % num_players]
@@ -437,6 +406,21 @@ def player_test(click_event=None):
                     else:
                         discard_popup = None
                         pending_end_turn = False
+                    break
+        return
+
+    if occupy_popup is not None:
+        if click_event and occupy_popup.get("rects"):
+            for key, val in occupy_popup["rects"].items():
+                rect, chosen_player = val
+                if rect.collidepoint(mouse_pos):
+                    if key == "cancel":
+                        occupy_popup = None
+                        dispatcher_occupied_mode = False
+                        dispatcher_occupied_pawn = None
+                    elif chosen_player is not None:
+                        dispatcher_occupied_pawn = chosen_player
+                        occupy_popup = None
                     break
         return
 
@@ -486,13 +470,20 @@ def player_test(click_event=None):
                     active_player.build_research_station(city_objects, Pandemic_Game)
 
                 elif btn_key == "cure":
-                    colour_cards = [c for c in active_player.cards
-                                    if c in city_objects and
-                                    city_objects[c].colour == current_city.colour]
-                    active_player.discover_cure(current_city.colour, colour_cards, city_objects, Pandemic_Game)
-                    for p in players:
-                        if isinstance(p, Medic):
-                            p.auto_remove_cured_cubes(city_objects, Pandemic_Game)
+                    colour_counts = {}
+                    for c in active_player.cards:
+                        if c in city_objects:
+                            col = city_objects[c].colour
+                            colour_counts.setdefault(col, []).append(c)
+                    cure_colour = next(
+                        (col for col, cards in colour_counts.items()
+                         if len(cards) >= active_player.require_to_cure and not Pandemic_Game.cures[["Blue","Yellow","Black","Red"].index(col)]),
+                        None
+                    )
+                    if cure_colour:
+                        cards_to_discard = colour_counts[cure_colour][:active_player.require_to_cure]
+                        active_player.discover_cure(cure_colour, cards_to_discard, city_objects, Pandemic_Game)
+                        check_win_lose()
 
                 elif btn_key == "share":
                     others = [p for p in players if p != active_player and p.city == active_player.city]
@@ -502,6 +493,12 @@ def player_test(click_event=None):
                 elif btn_key == "skip":
                     if active_player.actions > 0:
                         active_player.actions -= 1
+
+                elif btn_key == "dispatcher_occupy":
+                    if isinstance(active_player, Dispatcher) and active_player.actions > 0:
+                        dispatcher_occupied_mode = True
+                        dispatcher_occupied_pawn = None
+                        occupy_popup = {"rects": {}}
 
                 break
 
@@ -539,13 +536,13 @@ def player_test(click_event=None):
         for city_name, city in city_objects.items():
             dist = ((mouse_pos[0] - city.location[0])**2 + (mouse_pos[1] - city.location[1])**2)**0.5
             if dist < 20:
-                if dispatcher_occupied_mode and isinstance(active_player, Dispatcher):
+                if dispatcher_occupied_mode and isinstance(active_player, Dispatcher) and dispatcher_occupied_pawn is not None:
                     in_city = [p for p in players if p.city == city_name]
-                    not_in_city = [p for p in players if p.city != city_name]
-                    if in_city and not_in_city and active_player.actions > 0:
-                        active_player.dispatcher_move_pawn_to_occupied_city(not_in_city[0], city_name, city_objects, players)
-                    dispatcher_occupied_mode = False
-                    moved_or_acted = True
+                    if in_city and dispatcher_occupied_pawn.city != city_name and active_player.actions > 0:
+                        active_player.dispatcher_move_pawn_to_occupied_city(dispatcher_occupied_pawn, city_name, city_objects, players)
+                        dispatcher_occupied_mode = False
+                        dispatcher_occupied_pawn = None
+                        moved_or_acted = True
                 else:
                     mover = dispatcher_move_other if (isinstance(active_player, Dispatcher) and dispatcher_move_other is not None) else active_player
                     current_city_obj = city_objects[mover.city]
@@ -592,6 +589,7 @@ def player_test(click_event=None):
 
     if active_player.actions == 0:
         end_turn(active_player)
+<<<<<<< HEAD
 def draw_event_popup():
     global event_popup
     if event_popup is None:
@@ -623,16 +621,16 @@ def player_cards_display():
     global event_card_rects
     event_card_rects = []
     screen.fill(DARK_BG)
+=======
+>>>>>>> 4b75faa31ca4bff8413c05fe0f50e9fdec5aeaaf
 
-    card_width = 120
-    card_height = 70
-    card_spacing = 12
-    cards_per_row = 4
-    panel_pad = 24
-    title_bar_h = 52
-    avatar_r = 44
-    top_header = 80
+turn = 0
+target = None
+dispatcher_move_other = None
+dispatcher_occupied_mode = False
+dispatcher_occupied_pawn = None
 
+<<<<<<< HEAD
     mouse_pos = pygame.mouse.get_pos()
 
     title_surf = smallGunfont.render("PLAYER CARDS", True, TEXT_MUTED)
@@ -955,11 +953,23 @@ def draw_movement_highlights():
             cx, cy = city.location
             main_r, main_w = 17, 3
             pygame.draw.circle(screen, h_color, (cx, cy), main_r, main_w)
+=======
+share_popup = None
+occupy_popup = None
+discard_popup = None
+pending_end_turn = False
+action_buttons = {}
+>>>>>>> 4b75faa31ca4bff8413c05fe0f50e9fdec5aeaaf
 
 running = True
 clock = pygame.time.Clock()
+
 game_state = [1,0,0,0]
 virus_angle = 0.0
+game_over = False
+game_won = False
+lose_reason = ""
+result_alpha = 0
 
 while running:
     click_event = False
@@ -1002,21 +1012,44 @@ while running:
                 
 
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_p:
-                if game_state [3] == 0:
+            if event.key == pygame.K_p and not game_over:
+                if game_state[3] == 0:
                     game_state[3] = 1
                 else:
                     game_state[3] = 0
 
+            elif event.key == pygame.K_ESCAPE and game_over:
+                running = False
+
+            elif event.key == pygame.K_r and game_over:
+                game_over = False
+                game_won = False
+                lose_reason = ""
+                result_alpha = 0
+                turn = 0
+                players = []
+
+                for name, data in city_list.items():
+                    city_objects[name] = City(
+                        name=name,
+                        connections=data["connections"],
+                        colour=data["colour"],
+                        location=data["location"]
+                    )
+                city_objects["Atlanta"].research_center = True
+
+                game_state[0] = 1
+
     if game_state[0] == 1:
         loading_screen()
-    
-    elif game_state[3] == 1:
-        player_cards_display()
+
+    elif game_state[3] == 1 and not game_over:
+        player_cards_display(screen, players, city_objects, width, height, smallGunfont, cityfont, get_colour)
 
     else:
         screen.fill((0,30,70))
         screen.blit(board, (0, 0))
+<<<<<<< HEAD
         
         draw_connections()
         draw_cities()
@@ -1029,6 +1062,24 @@ while running:
         draw_share_popup()
         draw_discard_popup()
         draw_event_popup()
+=======
+
+        draw_connections(screen, city_objects, width, get_colour)
+        draw_cities(screen, city_objects, virus_angle, cityfont, get_colour)
+        draw_outbreak_animations(screen, Pandemic_Game, city_objects)
+        draw_movement_highlights(screen, players, city_objects, turn, num_players, dispatcher_occupied_mode, dispatcher_occupied_pawn, dispatcher_move_other)
+        draw_board(screen, Pandemic_Game, city_objects, width, height, largeGunfont, smallGunfont, tinyGunfont, cityfont, get_colour)
+        draw_players(screen, players, city_objects, turn, num_players)
+        action_buttons = draw_current_player_panel(screen, players, city_objects, Pandemic_Game, turn, num_players, width, height, tinyGunfont, cityfont, get_colour, dispatcher_occupied_mode, dispatcher_occupied_pawn)
+
+        if not game_over:
+            player_test(click_event)
+            share_popup = draw_share_popup(screen, share_popup, players, turn, width, height, smallGunfont, tinyGunfont)
+            occupy_popup = draw_occupy_popup(screen, occupy_popup, players, turn, width, height, tinyGunfont)
+            discard_popup = draw_discard_popup(screen, discard_popup, city_objects, width, height, smallGunfont, tinyGunfont, cityfont, get_colour)
+        else:
+            result_alpha = draw_result_screen(screen, Pandemic_Game, game_won, lose_reason, result_alpha, width, height, largeGunfont, smallGunfont, tinyGunfont, cityfont)
+>>>>>>> 4b75faa31ca4bff8413c05fe0f50e9fdec5aeaaf
 
     pygame.display.flip()
     clock.tick(60)
