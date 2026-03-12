@@ -142,62 +142,58 @@ class Player:
                         if total_cubes == 0:
                             board.eradicated[idx] = True
                         self.actions -= 1
-    
-    def use_event_card(self, card_name, board, city_objects, target_city=None, reordered_list=None):
 
-            if card_name not in self.cards:
-                return
-        
-           
+    def use_event_card(self, card_name, board, city_objects, target_city, reordered_list):
+        if card_name in self.cards:
             if card_name == "Government Grant":
                 if target_city:
                     city = city_objects.get(target_city)
-                    if city:
-                        city.research_center = True
-                        self.cards.remove(card_name)
-                        board.player_discard_pile.append(card_name)
-                        print(f"Government Grant used: Research Station built in {target_city}")
-        
-    
-            elif card_name == "Airlift":
-                if target_city:
-                    self.city = target_city
+                    city.research_center = True
                     self.cards.remove(card_name)
                     board.player_discard_pile.append(card_name)
-                    print(f"Airlift used: Moved to {target_city}")
-        
-       
+                    print(f"Government Grant used: Research Station built in {target_city}")
+            
+            elif card_name == "Airlift":
+                if target_city:
+                    self.city = target_city 
+                    self.cards.remove(card_name)
+                    board.player_discard_pile.append(card_name)
+            
             elif card_name == "One Quiet Night":
+                # Skip the next 'Infect Cities' step
                 board.quiet_night_active = True
-                self.cards.remove(card_name)
-                board.player_discard_pile.append(card_name)
-                print("One Quiet Night activated")
-        
-         
+                self._discard_event(card_name, board)
+    
             elif card_name == "Forecast":
                 num_to_draw = min(6, len(board.infection_cards))
-        
-                top_cards = board.infection_cards[-num_to_draw:]
+                top_6 = board.infection_cards[-num_to_draw:]
+                        
+                        # 2. Remove them from the deck temporarily
                 board.infection_cards = board.infection_cards[:-num_to_draw]
-        
-                print(f"Forecasting: {top_cards}")
-        
+                        
+                print(f"Forecasting: {top_6}")
+            
+                        # 3. Put them back in the new order
+                        # If reordered_list is provided (e.g., ['Paris', 'Tokyo', ...]), use it.
+                        # Otherwise, just put them back as they were (safe default).
                 if reordered_list and len(reordered_list) == num_to_draw:
                     board.infection_cards.extend(reordered_list)
                 else:
-                    board.infection_cards.extend(top_cards)
-        
+                    board.infection_cards.extend(top_6)
+                        
+                    print("Infection deck rearranged.")
+            
+                    # Cleanup: Discard the event card
                 self.cards.remove(card_name)
                 board.player_discard_pile.append(card_name)
-                print("Infection deck rearranged.")
-        
-        
+    
             elif card_name == "Resilient Population":
                 if target_city in board.infection_discard_pile:
                     board.infection_discard_pile.remove(target_city)
                     self.cards.remove(card_name)
                     board.player_discard_pile.append(card_name)
-                    print(f"Resilient Population used: Removed {target_city}")
+            pass
+
 
 class Medic(Player):
     def treat_disease(self, colour, city_objects, board):

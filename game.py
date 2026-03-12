@@ -10,7 +10,6 @@ from board import Board, draw_board, draw_outbreak_animations, draw_result_scree
 
 pygame.init()
 
-
 largefont = pygame.font.SysFont("arial", 60)
 smallfont = pygame.font.SysFont("arial", 40)
 cityfont = pygame.font.SysFont("arial", 12, bold=True)
@@ -19,12 +18,12 @@ largeGunfont = pygame.font.Font("Gunplay.ttf", 100)
 smallGunfont = pygame.font.Font("Gunplay.ttf", 50)
 tinyGunfont = pygame.font.Font("Gunplay.ttf", 20)
 
-width, height = 1400, 950
+width, height = 1400, 800
 screen = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Pandemic Board Game")
 
 board = pygame.image.load("image.png")
-board = pygame.transform.scale(board, (width-200, height-150))
+board = pygame.transform.scale(board, (width-200, height))
 
 city_objects = {}
 for name, data in city_list.items():
@@ -34,15 +33,7 @@ for name, data in city_list.items():
         colour=data["colour"],
         location=data["location"]
     )
-EVENT_CARDS = [
-    "Airlift",
-    "Government Grant",
-    "One Quiet Night",
-    "Resilient Population",
-    "Forecast"
-]
 city_objects["Atlanta"].research_center = True
-
 
 players = []
 player_options = [2, 3, 4]
@@ -168,187 +159,11 @@ def check_win_lose():
             lose_reason = f"NO {col.upper()} CUBES LEFT"
             return
 
-<<<<<<< HEAD
-            glow_surf = pygame.Surface((30, 30), pygame.SRCALPHA)
-            glow_col = (*colour, max(0, alpha // 3))
-            pygame.draw.circle(glow_surf, glow_col, (15, 15), 15)
-            screen.blit(glow_surf, (tx - 15, ty - 15))
-            dot_surf = pygame.Surface((14, 14), pygame.SRCALPHA)
-            pygame.draw.circle(dot_surf, (*colour, alpha), (7, 7), 7)
-            screen.blit(dot_surf, (tx - 7, ty - 7))
-        ring_r = int(14 + p * 28)
-        ring_surf = pygame.Surface((ring_r * 2 + 4, ring_r * 2 + 4), pygame.SRCALPHA)
-        ring_col = (*colour, max(0, alpha // 2))
-        pygame.draw.circle(ring_surf, ring_col, (ring_r + 2, ring_r + 2), ring_r, 3)
-        screen.blit(ring_surf, (src[0] - ring_r - 2, src[1] - ring_r - 2))
-
-        anim["progress"] += 0.025
-        if anim["progress"] < 1.0:
-            still_active.append(anim)
-
-    Pandemic_Game.outbreak_animations = still_active
-
-def draw_cities():
-    for city in city_objects.values():
-        x, y = city.location
-        color = get_colour(city.colour)
-
-        pygame.draw.circle(screen, (255, 255, 255), (x, y), 12)
-        pygame.draw.circle(screen, color, (x, y), 10)
-
-        city_txt = city.name
-
-        if city.research_center == True:
-            city_txt += " (R)"
-
-        name_surface = cityfont.render(city_txt, True, (255, 255, 255))
-        name_rect = name_surface.get_rect(center=(x, y + 25))
-        bg_rect = name_rect.inflate(6, 3)
-        pygame.draw.rect(screen, (38, 48, 62), bg_rect, border_radius=4)
-        pygame.draw.rect(screen, (55, 70, 90), bg_rect, 1, border_radius=4)
-        screen.blit(name_surface, name_rect)
-
-        virus_colours = [(80, 130, 255), (230, 210, 40), (180, 180, 180), (240, 60, 60)]
-        
-        cube_size = 9
-        orbit_radius = 22
-
-        cubes = []
-        for colour_idx, count in enumerate(city.virus):
-            for _ in range(count):
-                cubes.append(colour_idx)
-
-        total = len(cubes)
-        if total > 0:
-            angle_step = (2 * math.pi) / total
-            for k, colour_idx in enumerate(cubes):
-                angle = virus_angle + k * angle_step
-                cx_off = int(x + orbit_radius * math.cos(angle))
-                cy_off = int(y + orbit_radius * math.sin(angle))
-                rect = pygame.Rect(cx_off - cube_size // 2, cy_off - cube_size // 2, cube_size, cube_size)
-                pygame.draw.rect(screen, virus_colours[colour_idx], rect, border_radius=3)
-                pygame.draw.rect(screen, (255, 255, 255), rect, 1, border_radius=3)
-
-def draw_board():
-    header_surface = largeGunfont.render("PANDEMIC", True, (255, 255, 255))
-    header_rect = header_surface.get_rect(center=(250, 80))
-    screen.blit(header_surface, header_rect)
-
-    cure_center = 483
-    cures_label = smallGunfont.render("Cures", True, (255,255,255))
-    screen.blit(cures_label, cures_label.get_rect(center=(cure_center, height-250)))
-
-    cures = [
-        ("Blue", 0, (cure_center-90,height-200)),
-        ("Yellow", 1, (cure_center-30,height-200)),
-        ("Black", 2, (cure_center+30,height-200)),
-        ("Red", 3, (cure_center+90,height-200))
-    ]
-
-    for colour_name, idx, pos in cures:
-        colour_rgb = get_colour(colour_name)
-
-        if Pandemic_Game.cures[idx]:
-            fill = (0,120,0)
-            border = (0,200,0)
-        else:
-            fill = (30,30,30)
-            border = (200,0,0)
-
-        pygame.draw.circle(screen, fill, pos, 20)
-        pygame.draw.circle(screen, border, pos, 20, 4)
-        pygame.draw.circle(screen, colour_rgb, pos, 13)
-
-    outbreak_center = (100, height-350)
-    size = 22
-    diamond_points = [
-        (outbreak_center[0], outbreak_center[1]-size),
-        (outbreak_center[0]+size, outbreak_center[1]),
-        (outbreak_center[0], outbreak_center[1]+size),
-        (outbreak_center[0]-size, outbreak_center[1])
-    ]
-
-    outbreak_label = tinyGunfont.render("Outbreaks", True, (255,255,255))
-    screen.blit(outbreak_label, outbreak_label.get_rect(center=(outbreak_center[0], outbreak_center[1]-40)))
-    pygame.draw.polygon(screen, (0,140,0), diamond_points)
-    pygame.draw.polygon(screen, (0,255,0), diamond_points, 4)
-
-    outbreak_text = tinyGunfont.render(str(Pandemic_Game.outbreak_counter), True, (255,255,255))
-    screen.blit(outbreak_text, outbreak_text.get_rect(center=(outbreak_center[0]+1, outbreak_center[1]+1)))
-
-    infection_center = (100, height-250)
-    infection_label = tinyGunfont.render("Infection Rate", True, (255,255,255))
-    screen.blit(infection_label, infection_label.get_rect(center=(infection_center[0], infection_center[1]-40)))
-    pygame.draw.circle(screen, (0,140,0), infection_center, 22)
-    pygame.draw.circle(screen, (0,255,0), infection_center, 22, 4)
-
-    infection_text = tinyGunfont.render(str(Pandemic_Game.infection_rate), True, (255,255,255))
-    screen.blit(infection_text, infection_text.get_rect(center=infection_center))
-
-def draw_players():
-    global turn, num_players
-    current_idx = turn % num_players
-    pawn_w = 15
-    gap = 6
-    total_w = num_players * pawn_w + (num_players - 1) * gap
-    start_x = -total_w // 2 + pawn_w // 2
-    for i in range(num_players):
-        p = players[i]
-        city = city_objects[p.city]
-        x, y = city.location
-        offset_x = x + start_x + i * (pawn_w + gap)
-        offset_y = y + 30
-        fill = ROLE_ACCENT.get(type(p).__name__, (80, 120, 160))
-        r = pygame.Rect(offset_x, offset_y, 15, 15)
-        pygame.draw.rect(screen, fill, r, border_radius=3)
-        border_w = 2 if i == current_idx else 1
-        border_color = (255, 255, 255) if i == current_idx else (55, 70, 90)
-        pygame.draw.rect(screen, border_color, r, border_w, border_radius=3)
-
-turn = 0
-target = None
-event_card_rects = []
-event_popup = None
-first_turn_event_done = False
-dispatcher_move_other = None
-dispatcher_occupied_mode = False
-
-share_popup = None
-discard_popup = None
-pending_end_turn = False
-
-action_buttons = {}
-
-def draw_action_button(rect, label, enabled, accent, hover):
-    if not enabled:
-        bg = (30, 38, 52)
-        border = (55, 65, 80)
-        text_col = (80, 90, 105)
-    elif hover:
-        bg = (min(accent[0]//2+40,255), min(accent[1]//2+40,255), min(accent[2]//2+40,255))
-        border = accent
-        text_col = (255, 255, 255)
-    else:
-        bg = (accent[0]//3, accent[1]//3, accent[2]//3)
-        border = (accent[0]//2+20, accent[1]//2+20, accent[2]//2+20)
-        text_col = (200, 210, 220)
-
-    pygame.draw.rect(screen, bg, rect, border_radius=7)
-    pygame.draw.rect(screen, border, rect, 2, border_radius=7)
-
-    shine_surf = pygame.Surface((rect.width - 4, rect.height // 3), pygame.SRCALPHA)
-    shine_surf.fill((255, 255, 255, 18 if enabled else 6))
-    screen.blit(shine_surf, (rect.x + 2, rect.y + 2))
-
-    txt = tinyGunfont.render(label, True, text_col)
-    screen.blit(txt, txt.get_rect(center=rect.center))
-=======
     if not Pandemic_Game.city_cards:
         game_over = True
         game_won = False
         lose_reason = "PLAYER DECK EXHAUSTED"
         return
->>>>>>> 4b75faa31ca4bff8413c05fe0f50e9fdec5aeaaf
 
 def end_turn(player):
     global turn, discard_popup, pending_end_turn
@@ -383,14 +198,8 @@ def end_turn(player):
 
 
 def player_test(click_event=None):
-<<<<<<< HEAD
-    global event_card_rects
-    global turn, target, dispatcher_move_other, dispatcher_occupied_mode
-    global share_popup, discard_popup, pending_end_turn
-=======
     global turn, target, dispatcher_move_other, dispatcher_occupied_mode, dispatcher_occupied_pawn
     global share_popup, discard_popup, occupy_popup, pending_end_turn
->>>>>>> 4b75faa31ca4bff8413c05fe0f50e9fdec5aeaaf
     mouse_pos = pygame.mouse.get_pos()
     keys = pygame.key.get_pressed()
     active_player = players[turn % num_players]
@@ -450,22 +259,6 @@ def player_test(click_event=None):
                 if btn_key == "treat":
                     active_player.treat_disease(current_city.colour, city_objects, Pandemic_Game)
 
-                elif btn_key == "event":
-                    event_cards_in_hand = [c for c in active_player.cards if c in EVENT_CARDS]
-                    if event_cards_in_hand:
-                        chosen_card = event_cards_in_hand[0] 
-                        active_player.use_event_card(
-                            chosen_card,
-                            Pandemic_Game,
-                            city_objects,
-                            active_player.city,
-                            None
-                        )
-                        if chosen_card in active_player.cards:
-                            active_player.cards.remove(chosen_card)
-                        Pandemic_Game.player_discard_pile.append(chosen_card)
-
-
                 elif btn_key == "build":
                     active_player.build_research_station(city_objects, Pandemic_Game)
 
@@ -509,30 +302,6 @@ def player_test(click_event=None):
             dispatcher_occupied_mode = True
 
     if click_event:
-       
-        for rect, card, player in event_card_rects:
-            if rect.collidepoint(mouse_pos):
-        
-                if card in EVENT_CARDS:
-                
-                    player.use_event_card(
-                        card,
-                        Pandemic_Game,
-                        city_objects,
-                        player.city,
-                        None   
-                        )
-
-                    if card in player.cards:
-                        player.cards.remove(card)
-                        Pandemic_Game.player_discard_pile.append(card)
-                    global event_popup
-                    event_popup = {
-                        "card": card,
-                        "player": player
-                    }
-                
-                    break
         for city_name, city in city_objects.items():
             dist = ((mouse_pos[0] - city.location[0])**2 + (mouse_pos[1] - city.location[1])**2)**0.5
             if dist < 20:
@@ -589,40 +358,6 @@ def player_test(click_event=None):
 
     if active_player.actions == 0:
         end_turn(active_player)
-<<<<<<< HEAD
-def draw_event_popup():
-    global event_popup
-    if event_popup is None:
-        return
-
-    overlay = pygame.Surface((width, height), pygame.SRCALPHA)
-    overlay.fill((0, 0, 0, 170))
-    screen.blit(overlay, (0, 0))
-
-    popup_w, popup_h = 500, 250
-    popup_x = width // 2 - popup_w // 2
-    popup_y = height // 2 - popup_h // 2
-
-    popup_rect = pygame.Rect(popup_x, popup_y, popup_w, popup_h)
-
-    pygame.draw.rect(screen, DARK_BG, popup_rect, border_radius=15)
-    pygame.draw.rect(screen, (255, 170, 60), popup_rect, 3, border_radius=15)
-
-    title = largefont.render("EVENT PLAYED", True, (255, 170, 60))
-    screen.blit(title, title.get_rect(center=(width//2, popup_y + 60)))
-
-    card_text = smallfont.render(event_popup["card"], True, TEXT_WHITE)
-    screen.blit(card_text, card_text.get_rect(center=(width//2, popup_y + 120)))
-
-    close_text = cityfont.render("CLICK ANYWHERE TO CONTINUE", True, TEXT_MUTED)
-    screen.blit(close_text, close_text.get_rect(center=(width//2, popup_y + 190)))
-                
-def player_cards_display():
-    global event_card_rects
-    event_card_rects = []
-    screen.fill(DARK_BG)
-=======
->>>>>>> 4b75faa31ca4bff8413c05fe0f50e9fdec5aeaaf
 
 turn = 0
 target = None
@@ -630,336 +365,11 @@ dispatcher_move_other = None
 dispatcher_occupied_mode = False
 dispatcher_occupied_pawn = None
 
-<<<<<<< HEAD
-    mouse_pos = pygame.mouse.get_pos()
-
-    title_surf = smallGunfont.render("PLAYER CARDS", True, TEXT_MUTED)
-    title_top = 24
-    screen.blit(title_surf, (width // 2 - title_surf.get_width() // 2, title_top))
-
-    for i, player in enumerate(players):
-        px = (i % 2) * (width // 2)
-        py = top_header + (i // 2) * ((height - top_header) // 2)
-        pw = width // 2
-        ph = (height - top_header) // 2
-
-        role_name = type(player).__name__.replace("_", " ")
-        accent = ROLE_ACCENT.get(type(player).__name__, (80, 120, 160))
-
-        panel_rect = pygame.Rect(px + panel_pad, py + panel_pad + 36, pw - 2 * panel_pad, ph - 2 * panel_pad - 36)
-        pygame.draw.rect(screen, CARD_BG, panel_rect, border_radius=12)
-        pygame.draw.rect(screen, (accent[0] // 2, accent[1] // 2, accent[2] // 2), panel_rect, 2, border_radius=12)
-
-        bar_rect = pygame.Rect(px + panel_pad, py + panel_pad + 36, pw - 2 * panel_pad, title_bar_h)
-        pygame.draw.rect(screen, accent, bar_rect)
-        avatar_cx = px + panel_pad + 12 + avatar_r
-        avatar_cy = py + panel_pad + 36 + title_bar_h // 2
-        pygame.draw.circle(screen, (30, 40, 55), (int(avatar_cx), int(avatar_cy)), avatar_r)
-        pygame.draw.circle(screen, accent, (int(avatar_cx), int(avatar_cy)), avatar_r, 3)
-
-        role_txt = smallGunfont.render(role_name.upper(), True, (255, 255, 255))
-        role_rect = role_txt.get_rect(midleft=(int(avatar_cx) + avatar_r + 14, bar_rect.centery))
-        screen.blit(role_txt, role_rect)
-
-    
-        total_cards = len(player.cards)
-        if total_cards > 0:
-            start_y = py + panel_pad + 36 + title_bar_h + 20
-            row_width = min(total_cards, cards_per_row) * (card_width + card_spacing) - card_spacing
-            start_x = px + (pw - row_width) // 2
-
-            for j, card in enumerate(player.cards):
-                row = j // cards_per_row
-                col = j % cards_per_row
-                card_x = start_x + col * (card_width + card_spacing)
-                card_y = start_y + row * (card_height + card_spacing)
-
-                rect = pygame.Rect(card_x, card_y, card_width, card_height)
-
-                event_card_rects.append((rect, card, player))
-                hover = rect.collidepoint(mouse_pos)
-                if hover:
-                    rect = rect.inflate(4, 4)
-                    card_x, card_y = rect.x, rect.y
-                
-                if card in city_objects:
-                    top_colour = get_colour(city_objects[card].colour)
-                
-                elif card in EVENT_CARDS:
-                    top_colour = (255, 170, 60)   # ORANGE EVENT CARD
-                
-                else:
-                    top_colour = (100, 120, 140)
-
-                card_r = 10
-                pygame.draw.rect(screen, (55, 70, 90), rect, border_radius=card_r)
-                top_bar = pygame.Rect(rect.x, rect.y, rect.width, 16)
-                pygame.draw.rect(screen, top_colour, top_bar, border_radius=card_r)
-                pygame.draw.rect(screen, accent, rect, 2, border_radius=card_r)
-                txt = cityfont.render(str(card), True, TEXT_WHITE)
-                screen.blit(txt, (rect.x + 10, rect.y + 26))
-        else:
-            no_cards = cityfont.render("No city cards", True, TEXT_MUTED)
-            cx = px + pw // 2 - no_cards.get_width() // 2
-            cy = py + panel_pad + 36 + title_bar_h + 80
-            screen.blit(no_cards, (cx, cy))
-
-def draw_share_popup():
-    global share_popup
-    if share_popup is None:
-        return
-
-    mx, my = pygame.mouse.get_pos()
-    active_player = players[turn % num_players]
-    accent = ROLE_ACCENT.get(type(active_player).__name__, (80, 120, 160))
-
-    overlay = pygame.Surface((width, height), pygame.SRCALPHA)
-    overlay.fill((0, 0, 0, 160))
-    screen.blit(overlay, (0, 0))
-
-    others = [p for p in players if p != active_player and p.city == active_player.city]
-    row_h = 90
-    pop_w = 460
-    pop_h = 150 + (len(others) * row_h)
-    
-    board_cx = (width - 200) // 2
-    pop_x = board_cx - pop_w // 2
-    pop_y = height // 2 - pop_h // 2
-    pop_rect = pygame.Rect(pop_x, pop_y, pop_w, pop_h)
-
-    pygame.draw.rect(screen, DARK_BG, pop_rect, border_radius=12)
-    pygame.draw.rect(screen, accent, pop_rect, 2, border_radius=12)
-
-    title = smallGunfont.render("SHARE KNOWLEDGE", True, TEXT_WHITE)
-    screen.blit(title, title.get_rect(centerx=pop_rect.centerx, top=pop_y + 18))
-
-    share_popup["rects"] = {}
-
-    btn_w, btn_h = 180, 44
-    btn_gap = 16
-    total_btn_w = btn_w * 2 + btn_gap
-    btn_start_x = pop_x + pop_w // 2 - total_btn_w // 2
-
-    row_start_y = pop_y + 72
-    for i, other in enumerate(others):
-        other_accent = ROLE_ACCENT.get(type(other).__name__, (80, 120, 160))
-        name_surf = tinyGunfont.render(other.name, True, other_accent)
-        screen.blit(name_surf, name_surf.get_rect(centerx=pop_rect.centerx, top=row_start_y + i * row_h + 8))
-
-        if isinstance(active_player, Researcher):
-            can_give_cards = list(active_player.cards)
-        else:
-            can_give_cards = [active_player.city] if active_player.city in active_player.cards else []
-        can_take_cards = [active_player.city] if active_player.city in other.cards else []
-
-        give_rect = pygame.Rect(btn_start_x, row_start_y + i * row_h + 38, btn_w, btn_h)
-        take_rect = pygame.Rect(btn_start_x + btn_w + btn_gap, row_start_y + i * row_h + 38, btn_w, btn_h)
-
-        draw_action_button(give_rect, "GIVE CARD", bool(can_give_cards), accent,
-                           give_rect.collidepoint(mx, my) and bool(can_give_cards))
-        draw_action_button(take_rect, "TAKE CARD", bool(can_take_cards), accent,
-                           take_rect.collidepoint(mx, my) and bool(can_take_cards))
-
-        share_popup["rects"][f"give_{i}"] = (give_rect, other, can_give_cards, True)
-        share_popup["rects"][f"take_{i}"] = (take_rect, other, can_take_cards, False)
-
-    cancel_rect = pygame.Rect(pop_rect.centerx - 60, pop_y + pop_h - 54, 120, 36)
-    draw_action_button(cancel_rect, "CANCEL", True, (100, 100, 110), cancel_rect.collidepoint(mx, my))
-    share_popup["rects"]["cancel"] = (cancel_rect, None, None, None)
-
-def draw_discard_popup():
-    global discard_popup
-    if discard_popup is None:
-        return
-
-    mx, my = pygame.mouse.get_pos()
-    player = discard_popup["player"]
-    overlay = pygame.Surface((width, height), pygame.SRCALPHA)
-    overlay.fill((0, 0, 0, 180))
-    screen.blit(overlay, (0, 0))
-
-    n_cards = len(player.cards)
-    board_cx = (width - 200) / 2
-    max_pop_w = 860
-    card_gap = 10
-    pad = 32
-
-    per_row = min(n_cards, max(1, (max_pop_w - pad * 2 + card_gap) // (100 + card_gap)))
-    rows = math.ceil(n_cards / per_row)
-    card_w = min(100, (max_pop_w - pad * 2 - card_gap * (per_row - 1)) // per_row)
-    card_h = int(card_w * 1.1)
-    pop_w = pad * 2 + per_row * card_w + (per_row - 1) * card_gap
-    title_h = 66
-    row_h = card_h + card_gap
-    pop_h = title_h + rows * row_h + pad
-    pop_x = board_cx - pop_w // 2
-    pop_y = height // 2 - pop_h // 2
-    pop_rect = pygame.Rect(pop_x, pop_y, pop_w, pop_h)
-
-    pygame.draw.rect(screen, DARK_BG, pop_rect, border_radius=12)
-    pygame.draw.rect(screen, (200, 60, 60), pop_rect, 2, border_radius=12)
-
-    over = n_cards - 7
-    msg = f"{player.name}: DISCARD {over} CARD{'S' if over > 1 else ''}"
-    title = smallGunfont.render(msg, True, (220, 80, 80))
-    screen.blit(title, title.get_rect(centerx=pop_rect.centerx, top=pop_y + 14))
-    pygame.draw.rect(screen, (60, 40, 40), pygame.Rect(pop_x + 20, pop_y + title_h - 4, pop_w - 40, 1))
-
-    cards_start_x = pop_x + pad
-    cards_start_y = pop_y + title_h + 4
-
-    discard_popup["card_rects"] = []
-    for i, card in enumerate(player.cards):
-        row = i // per_row
-        col = i % per_row
-        cx = cards_start_x + col * (card_w + card_gap)
-        cy = cards_start_y + row * row_h
-        crect = pygame.Rect(cx, cy, card_w, card_h)
-        hover = crect.collidepoint(mx, my)
-        top_colour = get_colour(city_objects[card].colour) if card in city_objects else (100, 120, 140)
-
-        bg_col = (70, 85, 105) if hover else CARD_BG
-        pygame.draw.rect(screen, bg_col, crect, border_radius=7)
-        pygame.draw.rect(screen, top_colour, pygame.Rect(cx, cy, card_w, 10), border_radius=7)
-        border_col = (220, 80, 80) if hover else (55, 70, 90)
-        pygame.draw.rect(screen, border_col, crect, 2, border_radius=7)
-        words = card.split()
-        lines = []
-        line = ""
-        for w in words:
-            test = (line + " " + w).strip()
-            if cityfont.size(test)[0] <= card_w - 8:
-                line = test
-            else:
-                if line: lines.append(line)
-                line = w
-        if line: lines.append(line)
-        for li, ltext in enumerate(lines[:3]):
-            ls = cityfont.render(ltext, True, TEXT_WHITE)
-            screen.blit(ls, ls.get_rect(centerx=crect.centerx, top=crect.y + 14 + li * 14))
-
-        if hover:
-            xs = tinyGunfont.render("DISCARD", True, (220, 80, 80))
-            screen.blit(xs, xs.get_rect(centerx=crect.centerx, bottom=crect.bottom - 5))
-
-        discard_popup["card_rects"].append((crect, card))
-
-
-def draw_current_player_panel():
-    global action_buttons
-    panel_x = width - 200
-    panel_width = 200
-    panel_height = height
-    mouse_pos = pygame.mouse.get_pos()
-
-    pygame.draw.rect(screen, DARK_BG, (panel_x, 0, panel_width, panel_height))
-    active_player = players[turn % num_players]
-    accent = ROLE_ACCENT.get(type(active_player).__name__, (80, 120, 160))
-
-    pygame.draw.rect(screen, (accent[0]//2, accent[1]//2, accent[2]//2), (panel_x, 0, 2, panel_height))
-    header_rect = pygame.Rect(panel_x, 0, panel_width, 70)
-    pygame.draw.rect(screen, (accent[0]//4, accent[1]//4, accent[2]//4), header_rect)
-    pygame.draw.rect(screen, accent, pygame.Rect(panel_x, 68, panel_width, 2))
-
-    name_surface = tinyGunfont.render(active_player.name, True, TEXT_WHITE)
-    role_name = type(active_player).__name__.replace("_", " ")
-    role_surface = tinyGunfont.render(role_name, True, accent)
-    screen.blit(name_surface, (panel_x + 12, 10))
-    screen.blit(role_surface, (panel_x + 12, 36))
-
-    pip_y = 82
-    actions_label = cityfont.render("ACTIONS", True, TEXT_MUTED)
-    screen.blit(actions_label, (panel_x + 12, pip_y))
-    for pip_i in range(4):
-        pip_x = panel_x + 12 + pip_i * 26
-        pip_rect = pygame.Rect(pip_x, pip_y + 16, 20, 10)
-        filled = pip_i < active_player.actions
-        pygame.draw.rect(screen, accent if filled else (40, 50, 65), pip_rect, border_radius=3)
-        if filled:
-            pygame.draw.rect(screen, (255,255,255), pip_rect, 1, border_radius=3)
-
-    card_label = cityfont.render("CARDS", True, TEXT_MUTED)
-    screen.blit(card_label, (panel_x + 12, 118))
-
-    card_w = 170
-    card_h = 46
-    card_gap = 6
-    card_start_y = 136
-    for i, card in enumerate(active_player.cards):
-        crect = pygame.Rect(panel_x + 14, card_start_y + i * (card_h + card_gap), card_w, card_h)
-        pygame.draw.rect(screen, CARD_BG, crect, border_radius=6)
-        top_colour = get_colour(city_objects[card].colour) if card in city_objects else (100, 120, 140)
-        pygame.draw.rect(screen, top_colour, pygame.Rect(crect.x, crect.y, card_w, 8), border_radius=6)
-        pygame.draw.rect(screen, (55, 70, 90), crect, 1, border_radius=6)
-        card_text = cityfont.render(str(card), True, TEXT_WHITE)
-        screen.blit(card_text, (crect.x + 8, crect.y + 16))
-
-    div_y = height - 230
-    pygame.draw.rect(screen, (45, 57, 75), pygame.Rect(panel_x + 10, div_y, panel_width - 20, 1))
-    btn_w = 170
-    btn_h = 32
-    btn_x = panel_x + 14
-    btn_gap = 8
-    btn_start_y = div_y - 15
-
-    current_city = city_objects[active_player.city]
-
-    can_treat = any(v > 0 for v in current_city.virus)
-    can_build = (active_player.city in active_player.cards and not current_city.research_center)
-    can_cure = (current_city.research_center and len([c for c in active_player.cards if c in city_objects and city_objects[c].colour == current_city.colour]) >= 5)
-    others_here = [p for p in players if p != active_player and p.city == active_player.city]
-    can_share = bool(others_here)
-
-    can_skip = active_player.actions > 0
-    can_event = any(card in EVENT_CARDS for card in active_player.cards)
-
-    buttons = [
-        ("treat", "TREAT", can_treat),
-        ("build", "BUILD RC", can_build),
-        ("cure", "CURE", can_cure),
-        ("share", "SHARE", can_share),
-        ("event", "EVENT", can_event),  
-        ("skip", "SKIP", can_skip),
-    ]
-
-    action_buttons = {}
-    for idx, (key, label, enabled) in enumerate(buttons):
-        brect = pygame.Rect(btn_x, btn_start_y + idx * (btn_h + btn_gap), btn_w, btn_h)
-        action_buttons[key] = brect
-        hover = brect.collidepoint(mouse_pos) and enabled
-        btn_accent = (90, 100, 115) if key == "skip" else accent
-        draw_action_button(brect, label, enabled, btn_accent, hover)
-
-def draw_movement_highlights():
-    global turn, players, num_players, city_objects
-    if not players:
-        return
-    active_player = players[turn % num_players]
-    current_city_obj = city_objects[active_player.city]
-    accent = ROLE_ACCENT.get(type(active_player).__name__, (80, 120, 160))
-    for name, city in city_objects.items():
-        h_color = None
-        if name == active_player.city and any(v > 0 for v in city.virus):
-            h_color = accent
-        elif name in current_city_obj.connections:
-            h_color = accent
-        elif current_city_obj.research_center and city.research_center and name != active_player.city:
-            h_color = accent
-        elif name in active_player.cards:
-            h_color = accent
-        elif active_player.city in active_player.cards and name != active_player.city:
-            h_color = accent
-        if h_color is not None:
-            cx, cy = city.location
-            main_r, main_w = 17, 3
-            pygame.draw.circle(screen, h_color, (cx, cy), main_r, main_w)
-=======
 share_popup = None
 occupy_popup = None
 discard_popup = None
 pending_end_turn = False
 action_buttons = {}
->>>>>>> 4b75faa31ca4bff8413c05fe0f50e9fdec5aeaaf
 
 running = True
 clock = pygame.time.Clock()
@@ -979,23 +389,13 @@ while running:
         
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
-        
-                
-                if event_popup is not None:
-                    event_popup = None
-                else:
-                    click_event = True
+                click_event = True
 
         elif event.type == pygame.KEYDOWN and game_state[0] == 1:
             if event.key == pygame.K_RETURN:
                 game_state[0] = 0 
                 Pandemic_Game = Board(city_objects, difficulty=selected_difficulty)
                 Pandemic_Game.set_board(city_objects)
-                
-                Pandemic_Game.city_cards.extend(EVENT_CARDS)
-                random.shuffle(Pandemic_Game.city_cards)
-                
-              
                 num_players = player_options[selected_index]
                 for i in range(num_players):
                     new_player = role_classes[i](
@@ -1004,12 +404,10 @@ while running:
                         total=num_players,
                         city_cards = Pandemic_Game.city_cards,
                         board=Pandemic_Game
-
                     )
                     players.append(new_player)
                 
                 Pandemic_Game.add_epidemic_card()
-                
 
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_p and not game_over:
@@ -1049,20 +447,6 @@ while running:
     else:
         screen.fill((0,30,70))
         screen.blit(board, (0, 0))
-<<<<<<< HEAD
-        
-        draw_connections()
-        draw_cities()
-        draw_outbreak_animations()
-        draw_movement_highlights()
-        draw_board()
-        draw_players()
-        draw_current_player_panel()
-        player_test(click_event)
-        draw_share_popup()
-        draw_discard_popup()
-        draw_event_popup()
-=======
 
         draw_connections(screen, city_objects, width, get_colour)
         draw_cities(screen, city_objects, virus_angle, cityfont, get_colour)
@@ -1079,7 +463,6 @@ while running:
             discard_popup = draw_discard_popup(screen, discard_popup, city_objects, width, height, smallGunfont, tinyGunfont, cityfont, get_colour)
         else:
             result_alpha = draw_result_screen(screen, Pandemic_Game, game_won, lose_reason, result_alpha, width, height, largeGunfont, smallGunfont, tinyGunfont, cityfont)
->>>>>>> 4b75faa31ca4bff8413c05fe0f50e9fdec5aeaaf
 
     pygame.display.flip()
     clock.tick(60)
