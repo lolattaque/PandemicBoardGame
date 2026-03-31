@@ -17,6 +17,7 @@ cityfont = pygame.font.SysFont("arial", 12, bold=True)
 largeGunfont = pygame.font.Font("Gunplay.ttf", 100)
 smallGunfont = pygame.font.Font("Gunplay.ttf", 50)
 tinyGunfont = pygame.font.Font("Gunplay.ttf", 20)
+avatar_footer_font = pygame.font.SysFont("arial", 32)
 
 width, height = 1400, 800
 screen = pygame.display.set_mode((width, height))
@@ -24,6 +25,29 @@ pygame.display.set_caption("Pandemic Board Game")
 
 board = pygame.image.load("image.png")
 board = pygame.transform.scale(board, (width-200, height))
+
+def _load_avatar_surfaces(sheet_path, cols=3, rows=3, target_px=92):
+    sheet = pygame.image.load(sheet_path).convert_alpha()
+    sw, sh = sheet.get_width(), sheet.get_height()
+    tile_w, tile_h = sw // cols, sh // rows
+    tiles = []
+    for ry in range(rows):
+        for cx in range(cols):
+            rect = pygame.Rect(cx * tile_w, ry * tile_h, tile_w, tile_h)
+            tile = pygame.Surface((tile_w, tile_h), pygame.SRCALPHA)
+            tile.blit(sheet, (0, 0), rect)
+            tile = pygame.transform.smoothscale(tile, (target_px, target_px))
+            tiles.append(tile)
+    return tiles
+
+
+AVATAR_SHEET_PATH = "assets/avatars.png"
+
+avatar_surfaces = _load_avatar_surfaces(AVATAR_SHEET_PATH, cols=3, rows=3, target_px=92)
+
+
+avatar_surfaces_small = [pygame.transform.smoothscale(s, (64, 64)) for s in avatar_surfaces] if avatar_surfaces else []
+avatar_surfaces_grid = [pygame.transform.smoothscale(s, (116, 116)) for s in avatar_surfaces] if avatar_surfaces else []
 
 city_objects = {}
 for name, data in city_list.items():
@@ -41,6 +65,9 @@ selected_index = 0
 selected_difficulty = 0
 player_colors = [(255, 255, 255), (0, 255, 0), (255, 165, 0), (255, 0, 255)]
 difficulties = ["Easy", "Normal", "Hard"]
+
+avatar_select_player_idx = 0
+avatar_grid_rects = []
 
 role_classes = [
     Medic, 
@@ -135,6 +162,94 @@ def loading_screen():
 
     instr_surface = cityfont.render("PRESS ENTER TO START MISSION", True, (100, 100, 100))
     screen.blit(instr_surface, (width/2 - instr_surface.get_width()/2, height - 40))
+
+
+def avatar_select_screen():
+    global avatar_select_player_idx, avatar_grid_rects
+    screen.fill((10, 20, 30))
+
+    title = largeGunfont.render("CHOOSE AVATARS", True, (235, 235, 235))
+    screen.blit(title, (width // 2 - title.get_width() // 2, 48))
+
+    cur_player = players[avatar_select_player_idx]
+    accent = ROLE_ACCENT.get(type(cur_player).__name__, (200, 0, 0))
+
+    chosen = {p.avatar_idx for p in players if getattr(p, "avatar_idx", None) is not None}
+
+    left_x = 120
+    top_y = 175
+    row_h = 104
+    thumb = 64
+    for i, p in enumerate(players):
+        row_y = top_y + i * row_h
+        row_accent = ROLE_ACCENT.get(type(p).__name__, (140, 140, 140))
+        row_rect = pygame.Rect(left_x - 14, row_y - 10, 420, row_h - 12)
+        if i == avatar_select_player_idx:
+            pygame.draw.rect(screen, (18, 24, 34), row_rect, border_radius=12)
+            pygame.draw.rect(screen, row_accent, row_rect, 2, border_radius=12)
+        else:
+            pygame.draw.rect(screen, (14, 18, 26), row_rect, border_radius=12)
+            pygame.draw.rect(screen, (50, 60, 78), row_rect, 1, border_radius=12)
+
+        name_s = smallfont.render(p.name, True, (255, 255, 255) if i == avatar_select_player_idx else (200, 200, 200))
+        role_s = tinyGunfont.render(type(p).__name__.replace("_", " "), True, row_accent)
+        screen.blit(name_s, (left_x + 12, row_y))
+        screen.blit(role_s, (left_x + 14, row_y + 48))
+
+        if getattr(p, "avatar_idx", None) is not None and avatar_surfaces_small:
+            idx = p.avatar_idx
+            if isinstance(idx, int) and 0 <= idx < len(avatar_surfaces_small):
+                tx = row_rect.right - thumb - 14
+                ty = row_rect.centery - thumb // 2
+                screen.blit(avatar_surfaces_small[idx], (tx, ty))
+                pygame.draw.rect(screen, row_accent, pygame.Rect(tx - 4, ty - 4, thumb + 8, thumb + 8), 2, border_radius=10)
+
+    grid_cols = 3
+    cell = 140
+    gap = 26
+    grid_x = width // 2 + 120
+    grid_y = 200
+    avatar_grid_rects = []
+    cur_idx = getattr(cur_player, "avatar_idx", None)
+    for idx, surf in enumerate(avatar_surfaces_grid if avatar_surfaces_grid else avatar_surfaces):
+        r = idx // grid_cols
+        c = idx % grid_cols
+        x = grid_x + c * (cell + gap)
+        y = grid_y + r * (cell + gap)
+        rect = pygame.Rect(x, y, cell, cell)
+        avatar_grid_rects.append((rect, idx))
+        hovered = rect.collidepoint(pygame.mouse.get_pos())
+        taken_by_other = (idx in chosen) and (cur_idx != idx)
+
+        if taken_by_other:
+            bg = (16, 20, 28)
+            border = (55, 60, 70)
+        else:
+            bg = (35, 45, 62) if hovered else (24, 30, 42)
+            border = accent if hovered else (70, 85, 105)
+
+        pygame.draw.rect(screen, bg, rect, border_radius=16)
+        pygame.draw.rect(screen, border, rect, 3 if hovered and not taken_by_other else 2, border_radius=16)
+
+        if surf:
+            screen.blit(surf, surf.get_rect(center=rect.center))
+
+        if taken_by_other:
+            overlay = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 140))
+            screen.blit(overlay, (rect.x, rect.y))
+            lock = tinyGunfont.render("TAKEN", True, (190, 190, 190))
+            screen.blit(lock, lock.get_rect(center=rect.center))
+
+        if cur_idx == idx:
+            pygame.draw.rect(screen, (255, 230, 150), rect.inflate(-10, -10), 3, border_radius=14)
+
+    all_set = all(getattr(p, "avatar_idx", None) is not None for p in players)
+    instr_text = "All set — press Enter to begin." if all_set else "One avatar per player — no duplicates."
+    instr_col = (220, 224, 230) if all_set else (175, 185, 198)
+    instr = avatar_footer_font.render(instr_text, True, instr_col)
+    footer_margin = 88
+    screen.blit(instr, (width // 2 - instr.get_width() // 2, height - footer_margin))
 
 def check_win_lose():
     global game_over, game_won, lose_reason
@@ -414,13 +529,32 @@ while running:
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
                 click_event = True
+                if game_state[0] == 2 and players and avatar_surfaces:
+                    mx, my = pygame.mouse.get_pos()
+                    chosen = {p.avatar_idx for p in players if getattr(p, "avatar_idx", None) is not None}
+                    cur = players[avatar_select_player_idx]
+                    cur_idx = getattr(cur, "avatar_idx", None)
+                    for rect, aidx in avatar_grid_rects:
+                        if rect.collidepoint((mx, my)):
+                            if (aidx in chosen) and (cur_idx != aidx):
+                                break
+                            players[avatar_select_player_idx].avatar_idx = aidx
+                            next_idx = None
+                            for step in range(1, len(players) + 1):
+                                j = (avatar_select_player_idx + step) % len(players)
+                                if getattr(players[j], "avatar_idx", None) is None:
+                                    next_idx = j
+                                    break
+                            avatar_select_player_idx = avatar_select_player_idx if next_idx is None else next_idx
+                            break
 
         elif event.type == pygame.KEYDOWN and game_state[0] == 1:
             if event.key == pygame.K_RETURN:
-                game_state[0] = 0 
+                game_state[0] = 2
                 Pandemic_Game = Board(city_objects, difficulty=selected_difficulty)
                 Pandemic_Game.set_board(city_objects)
                 num_players = player_options[selected_index]
+                players = []
                 for i in range(num_players):
                     new_player = role_classes[i](
                         name=f"Player {i+1}",
@@ -432,6 +566,15 @@ while running:
                     players.append(new_player)
                 
                 Pandemic_Game.add_epidemic_card()
+                avatar_select_player_idx = 0
+
+        elif event.type == pygame.KEYDOWN and game_state[0] == 2:
+            if event.key == pygame.K_RETURN:
+                if players and all(getattr(p, "avatar_idx", None) is not None for p in players):
+                    game_state[0] = 0
+            elif event.key == pygame.K_ESCAPE:
+                players = []
+                game_state[0] = 1
 
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_p and not game_over:
@@ -465,8 +608,11 @@ while running:
     if game_state[0] == 1:
         loading_screen()
 
+    elif game_state[0] == 2:
+        avatar_select_screen()
+
     elif game_state[3] == 1 and not game_over:
-        player_cards_display(screen, players, city_objects, width, height, smallGunfont, cityfont, get_colour)
+        player_cards_display(screen, players, city_objects, width, height, smallGunfont, cityfont, get_colour, avatar_surfaces=avatar_surfaces)
 
     else:
         screen.fill((0,30,70))
@@ -478,7 +624,7 @@ while running:
         draw_movement_highlights(screen, players, city_objects, turn, num_players, dispatcher_occupied_mode, dispatcher_occupied_pawn, dispatcher_move_other)
         draw_board(screen, Pandemic_Game, city_objects, width, height, largeGunfont, smallGunfont, tinyGunfont, cityfont, get_colour)
         draw_players(screen, players, city_objects, turn, num_players)
-        action_buttons = draw_current_player_panel(screen, players, city_objects, Pandemic_Game, turn, num_players, width, height, tinyGunfont, cityfont, get_colour, dispatcher_occupied_mode, dispatcher_occupied_pawn)
+        action_buttons = draw_current_player_panel(screen, players, city_objects, Pandemic_Game, turn, num_players, width, height, tinyGunfont, cityfont, get_colour, dispatcher_occupied_mode, dispatcher_occupied_pawn, avatar_surfaces=avatar_surfaces)
 
         if not game_over:
             player_test(click_event)

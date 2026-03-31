@@ -26,6 +26,7 @@ class Player:
         self.actions = 4
         self.require_to_cure = 5
         self.operations = False
+        self.avatar_idx = None
 
         for _ in range (6-total):
             self.draw_cards(city_cards, board)
@@ -393,7 +394,21 @@ def draw_players(screen, players, city_objects, turn, num_players):
         pygame.draw.rect(screen, border_color, r, border_w, border_radius=3)
 
 
-def draw_current_player_panel(screen, players, city_objects, board, turn, num_players, width, height, tinyGunfont, cityfont, get_colour_fn, dispatcher_occupied_mode=False, dispatcher_occupied_pawn=None):
+def _blit_avatar_circle(screen, avatar_surf, center, radius):
+    import pygame
+    if avatar_surf is None:
+        return
+    size = int(radius * 2)
+    if size <= 0:
+        return
+    avatar = pygame.transform.smoothscale(avatar_surf, (size, size))
+    mask = pygame.Surface((size, size), pygame.SRCALPHA)
+    pygame.draw.circle(mask, (255, 255, 255, 255), (radius, radius), radius)
+    avatar.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    screen.blit(avatar, (int(center[0] - radius), int(center[1] - radius)))
+
+
+def draw_current_player_panel(screen, players, city_objects, board, turn, num_players, width, height, tinyGunfont, cityfont, get_colour_fn, dispatcher_occupied_mode=False, dispatcher_occupied_pawn=None, avatar_surfaces=None):
     panel_x = width - 200
     panel_width = 200
     mouse_pos = pygame.mouse.get_pos()
@@ -410,6 +425,13 @@ def draw_current_player_panel(screen, players, city_objects, board, turn, num_pl
     screen.blit(tinyGunfont.render(active_player.name, True, TEXT_WHITE), (panel_x + 12, 10))
     role_name = type(active_player).__name__.replace("_", " ")
     screen.blit(tinyGunfont.render(role_name, True, accent), (panel_x + 12, 36))
+    if avatar_surfaces is not None and getattr(active_player, "avatar_idx", None) is not None:
+        idx = active_player.avatar_idx
+        if isinstance(idx, int) and 0 <= idx < len(avatar_surfaces):
+            av_cx, av_cy, av_r = panel_x + panel_width - 34, 35, 20
+            pygame.draw.circle(screen, (30, 40, 55), (av_cx, av_cy), av_r)
+            pygame.draw.circle(screen, accent, (av_cx, av_cy), av_r, 2)
+            _blit_avatar_circle(screen, avatar_surfaces[idx], (av_cx, av_cy), av_r - 3)
 
     pip_y = 82
     screen.blit(cityfont.render("ACTIONS", True, TEXT_MUTED), (panel_x + 12, pip_y))
@@ -483,7 +505,7 @@ def draw_current_player_panel(screen, players, city_objects, board, turn, num_pl
     return action_buttons
 
 
-def player_cards_display(screen, players, city_objects, width, height, smallGunfont, cityfont, get_colour_fn):
+def player_cards_display(screen, players, city_objects, width, height, smallGunfont, cityfont, get_colour_fn, avatar_surfaces=None):
     import pygame
     screen.fill(DARK_BG)
     card_width, card_height, card_spacing = 120, 70, 12
@@ -509,6 +531,10 @@ def player_cards_display(screen, players, city_objects, width, height, smallGunf
         avatar_cy = py + panel_pad + 36 + title_bar_h // 2
         pygame.draw.circle(screen, (30, 40, 55), (int(avatar_cx), int(avatar_cy)), avatar_r)
         pygame.draw.circle(screen, accent, (int(avatar_cx), int(avatar_cy)), avatar_r, 3)
+        if avatar_surfaces is not None and getattr(player, "avatar_idx", None) is not None:
+            idx = player.avatar_idx
+            if isinstance(idx, int) and 0 <= idx < len(avatar_surfaces):
+                _blit_avatar_circle(screen, avatar_surfaces[idx], (avatar_cx, avatar_cy), avatar_r - 4)
 
         role_name = type(player).__name__.replace("_", " ")
         role_txt = smallGunfont.render(role_name.upper(), True, (255, 255, 255))
