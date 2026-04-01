@@ -39,7 +39,8 @@ class Player:
         if len(self.cards) < 7:
             drawn_card = city_cards.pop()
             if drawn_card == "Infection Card":
-                board.infection_rate += 1
+                board.epidemic_count += 1
+                board.infection_rate = board.infection_rate_track[min(board.epidemic_count, len(board.infection_rate_track) - 1)]
                 board.shuffle_infection_deck()
                 self.draw_cards(city_cards,board)
 
@@ -104,7 +105,7 @@ class Player:
         if self.actions > 0:
             current = city_objects.get(self.city)
             idx = COLOUR_INDEX.get(colour)
-            if current and current.colour == colour and idx is not None and current.virus[idx] > 0:
+            if current and idx is not None and current.virus[idx] > 0:
                 if board.cures[idx]:
                     current.virus[idx] = 0
                     total = sum(c.virus[idx] for c in city_objects.values() if c.colour == colour)
@@ -201,7 +202,7 @@ class Medic(Player):
         if self.actions > 0:
             current = city_objects.get(self.city)
             idx = COLOUR_INDEX.get(colour)
-            if current and current.colour == colour and idx is not None and current.virus[idx] > 0:
+            if current and idx is not None and current.virus[idx] > 0:
                 current.virus[idx] = 0
                 total = sum(c.virus[idx] for c in city_objects.values() if c.colour == colour)
                 if total == 0:

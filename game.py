@@ -293,7 +293,8 @@ def end_turn(player):
             return
         drawn = Pandemic_Game.city_cards.pop()
         if drawn == "Infection Card":
-            Pandemic_Game.infection_rate += 1
+            Pandemic_Game.epidemic_count += 1
+            Pandemic_Game.infection_rate = Pandemic_Game.infection_rate_track[min(Pandemic_Game.epidemic_count, len(Pandemic_Game.infection_rate_track) - 1)]
             Pandemic_Game.shuffle_infection_deck()
         else:
             player.cards.append(drawn)
@@ -372,7 +373,15 @@ def player_test(click_event=None):
                 current_city = city_objects[active_player.city]
 
                 if btn_key == "treat":
-                    active_player.treat_disease(current_city.colour, city_objects, Pandemic_Game)
+                    colour_order = ["Blue", "Yellow", "Black", "Red"]
+                    native = current_city.colour
+                    native_idx = colour_order.index(native)
+                    if current_city.virus[native_idx] > 0:
+                        treat_colour = native
+                    else:
+                        others = [col for col in colour_order if col != native and current_city.virus[colour_order.index(col)] > 0]
+                        treat_colour = random.choice(others) if others else native
+                    active_player.treat_disease(treat_colour, city_objects, Pandemic_Game)
 
                 elif btn_key == "build":
                     active_player.build_research_station(city_objects, Pandemic_Game)

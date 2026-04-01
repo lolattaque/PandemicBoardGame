@@ -7,7 +7,9 @@ class Board:
         self.city_cards = list(city_objects.keys())
         self.infection_card_discard_pile = []
         self.outbreak_counter = 0
-        self.infection_rate = 2
+        self.infection_rate_track = [2, 2, 2, 3, 3, 4, 4]
+        self.epidemic_count = 0
+        self.infection_rate = self.infection_rate_track[0]
         self.cures = [False, False, False, False]
         self.eradicated = [False, False, False, False]
         self.player_discard_pile = []
