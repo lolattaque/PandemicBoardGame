@@ -12,7 +12,7 @@ sys.modules["pygame"] = MagicMock()
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from cities import city_list, City
 from board import Board
-from players import Player, Medic, Scientist, Researcher, Operations_Expert, Dispatcher, Quarantine_Specialist, Contingency_Planner, COLOUR_INDEX
+from players import Medic, Scientist, Researcher, Operations_Expert, Dispatcher, Quarantine_Specialist, Contingency_Planner
 
 #static values from our pandemic game
 CITY_NAMES = sorted(city_list.keys())
@@ -22,19 +22,45 @@ NUM_COLOURS = 4
 NUM_ACTIONS = NUM_CITIES + NUM_COLOURS + 1 + NUM_COLOURS + 1
 COLOUR_ORDER = ["Blue", "Yellow", "Black", "Red"]
 
+ROLE_CLASSES = [
+    Medic,
+    Scientist,
+    Researcher,
+    Dispatcher,
+    Contingency_Planner,
+    Operations_Expert,
+    Quarantine_Specialist,
+]
+ROLE_ORDER = [cls.__name__ for cls in ROLE_CLASSES]
+NUM_ROLES = len(ROLE_ORDER)
+
 class PandemicEnv(gym.Env):
 
     #initialize the game environment
-    def __init__(self, difficulty=0, num_players=2):
+    def __init__(self, difficulty=0, num_players=2, max_episode_steps=None):
         super().__init__()
         self.difficulty = difficulty
         self.num_players = num_players
+        self.max_episode_steps = max_episode_steps
+        self._elapsed_steps = 0
         self.board = None
         self.turn = None
         self.players = None
         self.city_objects = None
 
-        observation_size = NUM_CITIES*7+NUM_COLOURS+3 
+        # Upper bound for player deck size at game setup (all city cards + epidemic inserts).
+        self._max_player_deck = float(NUM_CITIES + int(self.difficulty) + 4)
+
+        observation_size = (
+            NUM_COLOURS * NUM_CITIES
+            + NUM_CITIES
+            + self.num_players * NUM_CITIES
+            + NUM_CITIES
+            + NUM_COLOURS
+            + 3
+            + NUM_ROLES
+            + 1
+        )
         self.observation_space = spaces.Box(low=0.0, high=1.0, shape=(observation_size,), dtype=np.float32)
         self.action_space = spaces.Discrete(NUM_ACTIONS)
 
@@ -51,13 +77,15 @@ class PandemicEnv(gym.Env):
         for city_name in CITY_NAMES:
             obs.append(1.0 if self.city_objects[city_name].research_center else 0.0)
 
-        #where is the active player
-        for city_name in CITY_NAMES:
-            obs.append(1.0 if active_player.city == city_name else 0.0)
+        # pawn positions for every player (seat order matches self.players)
+        for p in self.players:
+            for city_name in CITY_NAMES:
+                obs.append(1.0 if p.city == city_name else 0.0)
 
-        #what cards the player has
+        # city cards in active player's hand (counts, max hand size 7 in rules)
         for city_name in CITY_NAMES:
-            obs.append(1.0 if city_name in active_player.cards else 0.0)
+            count = sum(1 for c in active_player.cards if c == city_name)
+            obs.append(min(count, 7) / 7.0)
 
         #cures, outbreak counter, infection rates, actions left
         for cure in self.board.cures:
@@ -67,7 +95,28 @@ class PandemicEnv(gym.Env):
         obs.append(self.board.infection_rate / 4.0)
         obs.append(active_player.actions / 4.0)
 
+        role_name = type(active_player).__name__
+        for name in ROLE_ORDER:
+            obs.append(1.0 if role_name == name else 0.0)
+
+        obs.append(len(self.board.city_cards) / self._max_player_deck)
+
         return np.array(obs, dtype=np.float32)
+
+    def terminal_outcome(self):
+        """If the game is in a terminal state, return outcome label; else None."""
+        if self.board is None or self.city_objects is None:
+            return None
+        if all(self.board.cures):
+            return "win"
+        if self.board.outbreak_counter >= 8:
+            return "lose_outbreaks"
+        if not self.board.city_cards:
+            return "lose_cards"
+        for idx in range(NUM_COLOURS):
+            if sum(self.city_objects[n].virus[idx] for n in self.city_objects) > 24:
+                return "lose_cubes"
+        return None
 
     def _get_info(self):
         return {
@@ -91,16 +140,7 @@ class PandemicEnv(gym.Env):
             )
         self.city_objects["Atlanta"].research_center = True
 
-        role_classes = [
-            Medic, 
-            Scientist, 
-            Researcher, 
-            Dispatcher, 
-            Contingency_Planner, 
-            Operations_Expert, 
-            Quarantine_Specialist
-            ]
-
+        role_classes = list(ROLE_CLASSES)
         random.shuffle(role_classes)
 
         self.board = Board(self.city_objects, self.difficulty)
@@ -118,7 +158,8 @@ class PandemicEnv(gym.Env):
             self.players.append(new_player)
         self.board.add_epidemic_card()
         self.turn = 0
- 
+        self._elapsed_steps = 0
+
         return self._get_obs(), self._get_info()
 
 
@@ -209,24 +250,21 @@ class PandemicEnv(gym.Env):
             active_player.actions = 4
             self.turn += 1
         
-        #tells the outcome of the training
-        terminated = False
-        outcome = None
-        if all(self.board.cures):
-            terminated, outcome = True, "win"
-        elif self.board.outbreak_counter >= 8:
-            terminated, outcome = True, "lose_outbreaks"
-        elif not self.board.city_cards:
-            terminated, outcome = True, "lose_cards"
-        else:
-            for idx in range(NUM_COLOURS):
-                if sum(self.city_objects[n].virus[idx] for n in self.city_objects) > 24:
-                    terminated, outcome = True, "lose_cubes"
-                    break
+        outcome = self.terminal_outcome()
+        terminated = outcome is not None
 
         if terminated:
             reward += 50.0 if outcome == "win" else -25.0
 
-        return self._get_obs(), reward, terminated, False, self._get_info()
+        self._elapsed_steps += 1
+        truncated = False
+        if (
+            self.max_episode_steps is not None
+            and self._elapsed_steps >= self.max_episode_steps
+            and not terminated
+        ):
+            truncated = True
+
+        return self._get_obs(), reward, terminated, truncated, self._get_info()
 
 

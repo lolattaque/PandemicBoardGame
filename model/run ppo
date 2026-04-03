@@ -1,0 +1,7 @@
+
+check the graph:
+python3 model/run_tensorboard.py --logdir model/tensorboard
+http://localhost:6006
+
+train:
+python3 model/eval_ppo.py --episodes 30 --model model/checkpoints/ppo_pandemic
