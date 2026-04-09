@@ -1,4 +1,5 @@
 import pygame
+import csv
 import random
 from players import (
     Player, Medic, Scientist, Researcher, Operations_Expert, Dispatcher, Quarantine_Specialist, Contingency_Planner,
