@@ -11,10 +11,26 @@ ROLE_ACCENT = {
     "Researcher": (230, 185, 125),
     "Scientist": (200, 55, 55),
 }
+EVENT_CARDS = [
+    "Airlift",
+    "Forecast",
+    "Government Grant",
+    "One Quiet Night",
+    "Resilient Population"
+]
+EVENT_CARD_DESCS = {
+    "Airlift": "Move any one pawn to any city.",
+    "Forecast": "Look at the top 6 infection cards and reorder them.",
+    "Government Grant": "Build a research station in any city.",
+    "One Quiet Night": "Skip the next 'Infect Cities' step.",
+    "Resilient Population": "Remove a city from the infection discard pile."
+}
+
 DARK_BG = (26, 32, 44)
 CARD_BG = (40, 52, 70)
 TEXT_WHITE = (240, 244, 248)
 TEXT_MUTED = (160, 174, 192)
+
 
 
 class Player:
@@ -30,6 +46,10 @@ class Player:
 
         for _ in range (6-total):
             self.draw_cards(city_cards, board)
+    def _discard_event(self, card_name, board):
+        if card_name in self.cards:
+            self.cards.remove(card_name)
+            board.player_discard_pile.append(card_name)
 
         
     def draw_cards(self, city_cards, board):
@@ -162,7 +182,7 @@ class Player:
                     board.player_discard_pile.append(card_name)
             
             elif card_name == "One Quiet Night":
-                # Skip the next 'Infect Cities' step
+         
                 board.quiet_night_active = True
                 self._discard_event(card_name, board)
     
@@ -170,14 +190,12 @@ class Player:
                 num_to_draw = min(6, len(board.infection_cards))
                 top_6 = board.infection_cards[-num_to_draw:]
                         
-                        # 2. Remove them from the deck temporarily
+            
                 board.infection_cards = board.infection_cards[:-num_to_draw]
                         
                 print(f"Forecasting: {top_6}")
             
-                        # 3. Put them back in the new order
-                        # If reordered_list is provided (e.g., ['Paris', 'Tokyo', ...]), use it.
-                        # Otherwise, just put them back as they were (safe default).
+
                 if reordered_list and len(reordered_list) == num_to_draw:
                     board.infection_cards.extend(reordered_list)
                 else:
@@ -185,7 +203,7 @@ class Player:
                         
                     print("Infection deck rearranged.")
             
-                    # Cleanup: Discard the event card
+                    
                 self.cards.remove(card_name)
                 board.player_discard_pile.append(card_name)
     
@@ -470,13 +488,14 @@ def draw_current_player_panel(screen, players, city_objects, board, turn, num_pl
     )
     can_share = bool([p for p in players if p != active_player and p.city == active_player.city])
     can_skip = active_player.actions > 0
-
+    has_event_card = any(card in EVENT_CARDS for card in active_player.cards)
     buttons = [
         ("treat", "TREAT", can_treat),
         ("build", "BUILD RC", can_build),
         ("cure", "CURE", can_cure),
         ("share", "SHARE", can_share),
         ("skip", "SKIP", can_skip),
+        ("event", "EVENT", has_event_card)
     ]
     if isinstance(active_player, Dispatcher) and active_player.actions > 0:
         has_other = any(p != active_player for p in players)
@@ -504,6 +523,31 @@ def draw_current_player_panel(screen, players, city_objects, board, turn, num_pl
             screen.blit(mode_txt, (btn_x, mode_y))
 
     return action_buttons
+def draw_event_popup(screen, player, width, height, font):
+    import pygame
+    
+    event_cards = [c for c in player.cards if c in EVENT_CARDS]
+    if not event_cards:
+        return None
+
+    popup_rect = pygame.Rect(width//2 - 200, height//2 - 150, 400, 300)
+    pygame.draw.rect(screen, (30, 40, 55), popup_rect, border_radius=10)
+
+    buttons = {}
+
+    for i, card in enumerate(event_cards):
+        rect = pygame.Rect(popup_rect.x + 20, popup_rect.y + 40 + i*50, 360, 40)
+        pygame.draw.rect(screen, (70, 90, 120), rect, border_radius=6)
+        
+        text = font.render(card, True, (255,255,255))
+        screen.blit(text, (rect.x + 10, rect.y + 10))
+        
+        desc = font.render(EVENT_CARD_DESCS.get(card, ""), True, (180,180,180))
+        screen.blit(desc, (rect.x + 10, rect.y + 25))
+
+        buttons[card] = rect
+
+    return buttons
 
 
 def player_cards_display(screen, players, city_objects, width, height, smallGunfont, cityfont, get_colour_fn, avatar_surfaces=None):
@@ -727,3 +771,123 @@ def draw_discard_popup(screen, discard_popup, city_objects, width, height, small
         discard_popup["card_rects"].append((crect, card))
 
     return discard_popup
+def draw_event_popup(screen, event_popup, players, turn, city_objects, board, width, height, tinyGunfont, cityfont):
+    if not event_popup:
+        return
+
+
+    overlay = pygame.Surface((1400, 800), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 180)) 
+    screen.blit(overlay, (0, 0))
+
+   
+    popup_rect = pygame.Rect(450, 200, 500, 400)
+    pygame.draw.rect(screen, (30, 30, 30), popup_rect, border_radius=15)
+    pygame.draw.rect(screen, (200, 0, 0), popup_rect, 3, border_radius=15)
+
+ 
+    player = event_popup["player"]
+    y_offset = 260
+    
+  
+    event_popup["rects"] = {}
+
+    title = cityfont.render("CHOOSE EVENT CARD", True, (255, 255, 255))
+    screen.blit(title, (popup_rect.centerx - title.get_width()//2, 220))
+
+    event_cards_in_hand = [c for c in player.cards if c in EVENT_CARDS]
+    
+   
+    if hasattr(player, "stored_event_card") and player.stored_event_card:
+        event_cards_in_hand.append(player.stored_event_card)
+
+    for card in event_cards_in_hand:
+        card_rect = pygame.Rect(475, y_offset, 450, 40)
+        pygame.draw.rect(screen, (50, 50, 50), card_rect, border_radius=5)
+        
+        text = tinyGunfont.render(card, True, (255, 255, 255))
+        screen.blit(text, (card_rect.x + 10, card_rect.y + 10))
+        
+        
+        event_popup["rects"][card] = (card_rect, card, False)
+        y_offset += 50
+
+  
+    cancel_rect = pygame.Rect(650, 550, 100, 40)
+    pygame.draw.rect(screen, (100, 100, 100), cancel_rect, border_radius=5)
+    cancel_txt = tinyGunfont.render("CANCEL", True, (255, 255, 255))
+    screen.blit(cancel_txt, cancel_txt.get_rect(center=cancel_rect.center))
+    event_popup["rects"]["cancel"] = (cancel_rect, None, False)
+    return event_popup
+def draw_event_target_popup(screen, pending_event, players, board, city_objects, width, height, tinyGunfont, cityfont):
+    if not pending_event:
+        return
+
+    # 1. Background Overlay
+    overlay = pygame.Surface((1400, 800), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 200))
+    screen.blit(overlay, (0, 0))
+
+    card_name = pending_event["card"]
+    step = pending_event.get("step", 1)
+    pending_event["rects"] = {} 
+    
+    popup_rect = pygame.Rect(400, 200, 600, 450)
+    pygame.draw.rect(screen, (25, 35, 45), popup_rect, border_radius=15)
+    pygame.draw.rect(screen, (0, 200, 255), popup_rect, 3, border_radius=15)
+
+    
+    title_text = f"{card_name.upper()}: "
+    
+    if card_name == "Airlift" and step == 1:
+        title_text += "Select Player to Move"
+        for i, p in enumerate(players):
+            btn_rect = pygame.Rect(450, 280 + (i * 50), 500, 40)
+            pygame.draw.rect(screen, (50, 60, 70), btn_rect, border_radius=5)
+            txt = tinyGunfont.render(f"{p.name} ({type(p).__name__})", True, (255, 255, 255))
+            screen.blit(txt, (btn_rect.x + 10, btn_rect.y + 10))
+            pending_event["rects"][f"player_{i}"] = (btn_rect, i)
+
+    elif (card_name == "Airlift" and step == 2) or (card_name == "Government Grant"):
+        title_text += "Click any City on the Map"
+
+        instr = tinyGunfont.render("Click a city node on the game board to target.", True, (200, 200, 200))
+        screen.blit(instr, (450, 300))
+
+    elif card_name == "Resilient Population":
+        title_text += "Select City to Remove from Discard"
+       
+        discard_pile = board.infection_card_discard_pile
+        if not discard_pile:
+            title_text = "Discard Pile is Empty!"
+        else:
+            for i, city_name in enumerate(discard_pile[-8:]): # Show last 8
+                btn_rect = pygame.Rect(450, 270 + (i * 35), 500, 30)
+                pygame.draw.rect(screen, (70, 40, 40), btn_rect, border_radius=5)
+                txt = tinyGunfont.render(city_name, True, (255, 255, 255))
+                screen.blit(txt, (btn_rect.x + 10, btn_rect.y + 5))
+                pending_event["rects"][city_name] = (btn_rect, city_name)
+
+    elif card_name == "Forecast":
+        title_text += "Examine Top 6 Infection Cards"
+        top_6 = board.infection_cards[-6:]
+        for i, city_name in enumerate(reversed(top_6)):
+            txt = tinyGunfont.render(f"{i+1}. {city_name}", True, (255, 255, 0))
+            screen.blit(txt, (450, 280 + (i * 30)))
+        
+    
+        conf_rect = pygame.Rect(650, 580, 120, 40)
+        pygame.draw.rect(screen, (0, 150, 0), conf_rect, border_radius=5)
+        conf_txt = tinyGunfont.render("OK", True, (255, 255, 255))
+        screen.blit(conf_txt, conf_txt.get_rect(center=conf_rect.center))
+        pending_event["rects"]["confirm"] = (conf_rect, True)
+
+    title_surf = cityfont.render(title_text, True, (255, 255, 255))
+    screen.blit(title_surf, (popup_rect.centerx - title_surf.get_width()//2, 220))
+
+    cancel_rect = pygame.Rect(420, 580, 120, 40)
+    pygame.draw.rect(screen, (150, 0, 0), cancel_rect, border_radius=5)
+    can_txt = tinyGunfont.render("CANCEL", True, (255, 255, 255))
+    screen.blit(can_txt, can_txt.get_rect(center=cancel_rect.center))
+    pending_event["rects"]["cancel"] = (cancel_rect, None)
+    return pending_event
