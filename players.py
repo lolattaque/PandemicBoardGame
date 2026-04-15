@@ -208,8 +208,8 @@ class Player:
                 board.player_discard_pile.append(card_name)
     
             elif card_name == "Resilient Population":
-                if target_city in board.infection_discard_pile:
-                    board.infection_discard_pile.remove(target_city)
+                if target_city in board.infection_card_discard_pile:
+                    board.infection_card_discard_pile.remove(target_city)
                     self.cards.remove(card_name)
                     board.player_discard_pile.append(card_name)
             pass
@@ -823,7 +823,7 @@ def draw_event_target_popup(screen, pending_event, players, board, city_objects,
     if not pending_event:
         return
 
-    # 1. Background Overlay
+   
     overlay = pygame.Surface((1400, 800), pygame.SRCALPHA)
     overlay.fill((0, 0, 0, 200))
     screen.blit(overlay, (0, 0))

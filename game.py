@@ -1,7 +1,16 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Apr 14 10:14:30 2026
+
+@author: MosesLee
+"""
+
 import pygame
 import random
 import csv
 import os
+import numpy as np
+
 from players import (
     Player, Medic, Scientist, Researcher, Operations_Expert, Dispatcher,
     Quarantine_Specialist, Contingency_Planner,
@@ -15,6 +24,8 @@ from cities import City, city_list, draw_connections, draw_cities, draw_movement
 from board import Board, draw_board, draw_outbreak_animations, draw_result_screen
 
 pygame.init()
+pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
+pygame.mixer.set_num_channels(16) 
 largefont  = pygame.font.SysFont("arial", 60)
 smallfont  = pygame.font.SysFont("arial", 40)
 cityfont   = pygame.font.SysFont("arial", 12, bold=True)
@@ -35,6 +46,25 @@ SAVE_FILE = "pandemic_save.csv"
 event_buttons = None
 
 
+
+def make_tone(freq=440, duration=0.15, volume=0.4, wave="sine", sample_rate=44100):
+    t = np.linspace(0, duration, int(sample_rate * duration), False)
+    if wave == "sine":
+        samples = np.sin(2 * np.pi * freq * t)
+    elif wave == "square":
+        samples = np.sign(np.sin(2 * np.pi * freq * t))
+    elif wave == "noise":
+        samples = np.random.uniform(-1, 1, len(t))
+  
+    fade = np.linspace(1, 0, len(t))
+    samples = (samples * fade * volume * 32767).astype(np.int16)
+    stereo = np.column_stack([samples, samples])
+    sound = pygame.sndarray.make_sound(stereo)
+    return sound
+
+
+SND_CLICK       = make_tone(600,  0.08, 0.3, "sine")        
+SND_AVATAR_SEL  = make_tone(880,  0.12, 0.35, "sine")      
 
 ROLE_CLASS_MAP = {
     "Player":                Player,
@@ -627,7 +657,6 @@ def player_test(click_event=None):
                     if card_name is not None:
                         event_popup = None
                         player_idx  = turn % num_players
-                        # Cards that need a target open a second popup
                         if card_name in ("Government Grant", "Resilient Population"):
                             pending_event = {"card": card_name, "player_idx": player_idx,
                                              "step": 2, "rects": {}}
@@ -655,7 +684,7 @@ def player_test(click_event=None):
             if btn_rect.collidepoint(mouse_pos):
                 current_city = city_objects[active_player.city]
                 if btn_key == "event":
-                   
+                    SND_CLICK.play()
                     if has_event_card:
                         event_popup = {
                             "player": active_player,
@@ -666,6 +695,7 @@ def player_test(click_event=None):
                         print("No event cards available!")
 
                 if btn_key == "treat":
+                    SND_CLICK.play()
                     colour_order = ["Blue","Yellow","Black","Red"]
                     native       = current_city.colour
                     native_idx   = colour_order.index(native)
@@ -678,9 +708,11 @@ def player_test(click_event=None):
                     active_player.treat_disease(treat_colour, city_objects, Pandemic_Game)
 
                 elif btn_key == "build":
+                    SND_CLICK.play()
                     active_player.build_research_station(city_objects, Pandemic_Game)
 
                 elif btn_key == "cure":
+                    SND_CLICK.play()
                     colour_counts = {}
                     for c in active_player.cards:
                         if c in city_objects:
@@ -698,16 +730,19 @@ def player_test(click_event=None):
                         check_win_lose()
 
                 elif btn_key == "share":
+                    SND_CLICK.play()
                     others = [p for p in players if p != active_player and p.city == active_player.city]
                     if others:
                         share_popup = {"rects": {}}
 
 
                 elif btn_key == "skip":
+                    SND_CLICK.play()
                     if active_player.actions > 0:
                         active_player.actions -= 1
 
                 elif btn_key == "dispatcher_occupy":
+                    SND_CLICK.play()
                     if isinstance(active_player, Dispatcher) and active_player.actions > 0:
                         dispatcher_occupied_mode = True
                         dispatcher_occupied_pawn = None
@@ -850,6 +885,7 @@ while running:
                         if (aidx in chosen) and (cur_idx != aidx):
                             break
                         players[avatar_select_player_idx].avatar_idx = aidx
+                        SND_AVATAR_SEL.play()
                         next_idx = None
                         for step in range(1, len(players)+1):
                             j = (avatar_select_player_idx + step) % len(players)
