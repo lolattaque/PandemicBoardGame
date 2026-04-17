@@ -66,6 +66,35 @@ def make_tone(freq=440, duration=0.15, volume=0.4, wave="sine", sample_rate=4410
 
 SND_CLICK       = make_tone(600,  0.08, 0.3, "sine")        
 SND_AVATAR_SEL  = make_tone(880,  0.12, 0.35, "sine")      
+SND_SWOOSH      = pygame.mixer.Sound("sfx/Swoosh.mp3")
+SND_AMONGUS     = pygame.mixer.Sound("sfx/amongus sound.mp3")
+
+_MUSIC_AWAY      = "sfx/Away - Patrick Patrikios.mp3"
+_MUSIC_HYPNOSIS  = "sfx/Hypnosis - Godmode.mp3"
+_MUSIC_NIGHTRIDE = "sfx/Night Ride - TrackTribe.mp3"
+_current_music   = None
+
+
+def _switch_music(path):
+    global _current_music
+    if _current_music == path:
+        return
+    _current_music = path
+    pygame.mixer.music.load(path)
+    pygame.mixer.music.set_volume(0.1)
+    pygame.mixer.music.play(-1)
+
+
+def _danger_active():
+    if not Pandemic_Game:
+        return False
+    if len(Pandemic_Game.city_cards) < 10:
+        return True
+    for idx in range(4):
+        total = sum(city_objects[n].virus[idx] for n in city_objects)
+        if 24 - total < 5:
+            return True
+    return False
 
 ROLE_CLASS_MAP = {
     "Player":                Player,
@@ -248,6 +277,7 @@ def load_game():
     Pandemic_Game.quiet_night_active         = bool(int(board.get("quiet_night", "0")))
     Pandemic_Game.outbreak_animations        = []
     Pandemic_Game.difficulty                 = selected_difficulty + 4
+    Pandemic_Game.snd_swoosh                 = SND_SWOOSH
 
     players = []
     for i in range(num_players):
@@ -281,6 +311,7 @@ def load_game():
     lose_reason  = ""
     result_alpha = 0
 
+    _switch_music(_MUSIC_AWAY)
     print(f"[LOAD] Game loaded from {SAVE_FILE}")
     return True
 
@@ -975,6 +1006,7 @@ while running:
                     game_state[0] = 2
                     Pandemic_Game = Board(city_objects, difficulty=selected_difficulty)
                     Pandemic_Game.set_board(city_objects)
+                    Pandemic_Game.snd_swoosh = SND_SWOOSH
   
                     for ec in EVENT_CARDS:
                         Pandemic_Game.city_cards.append(ec)
@@ -1003,6 +1035,8 @@ while running:
                                 players[i] = convert_to_ai(players[i])
                                 players[i].name = f"CPU {i + 1}"
                         game_state[0] = 0
+                        SND_AMONGUS.play()
+                        _switch_music(_MUSIC_AWAY)
                 elif event.key == pygame.K_ESCAPE:
                     players      = []
                     for i in range(4):
@@ -1038,6 +1072,7 @@ while running:
 
     
     if game_state[0] == 1:
+        _switch_music(_MUSIC_NIGHTRIDE)
         load_button_rect = loading_screen()
 
     elif game_state[0] == 2:
@@ -1049,6 +1084,9 @@ while running:
                              avatar_surfaces=avatar_surfaces)
 
     else:
+        if Pandemic_Game and not game_over:
+            _switch_music(_MUSIC_HYPNOSIS if _danger_active() else _MUSIC_AWAY)
+
         screen.fill((0, 30, 70))
         screen.blit(board_img, (0, 0))
 

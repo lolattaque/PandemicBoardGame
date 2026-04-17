@@ -25,6 +25,8 @@ class City:
 
         visited.add(self.name)
         board.outbreak_counter += 1
+        if hasattr(board, "snd_swoosh"):
+            board.snd_swoosh.play()
         self.virus[source_idx] = 3
         if hasattr(board, "outbreak_animations"):
             board.outbreak_animations.append({
