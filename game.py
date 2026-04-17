@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Apr 14 10:14:30 2026
-
-@author: MosesLee
-"""
-
 import pygame
 import random
 import csv
@@ -26,14 +19,14 @@ from model.rule_based import AIPlayer
 
 pygame.init()
 pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
-pygame.mixer.set_num_channels(16) 
-largefont  = pygame.font.SysFont("arial", 60)
-smallfont  = pygame.font.SysFont("arial", 40)
-cityfont   = pygame.font.SysFont("arial", 12, bold=True)
+pygame.mixer.set_num_channels(16)
+largefont = pygame.font.SysFont("arial", 60)
+smallfont = pygame.font.SysFont("arial", 40)
+cityfont = pygame.font.SysFont("arial", 12, bold=True)
 
-largeGunfont  = pygame.font.Font("Gunplay.ttf", 100)
-smallGunfont  = pygame.font.Font("Gunplay.ttf", 50)
-tinyGunfont   = pygame.font.Font("Gunplay.ttf", 20)
+largeGunfont = pygame.font.Font("Gunplay.ttf", 100)
+smallGunfont = pygame.font.Font("Gunplay.ttf", 50)
+tinyGunfont = pygame.font.Font("Gunplay.ttf", 20)
 avatar_footer_font = pygame.font.SysFont("arial", 32)
 
 width, height = 1400, 800
@@ -47,7 +40,6 @@ SAVE_FILE = "pandemic_save.csv"
 event_buttons = None
 
 
-
 def make_tone(freq=440, duration=0.15, volume=0.4, wave="sine", sample_rate=44100):
     t = np.linspace(0, duration, int(sample_rate * duration), False)
     if wave == "sine":
@@ -56,7 +48,6 @@ def make_tone(freq=440, duration=0.15, volume=0.4, wave="sine", sample_rate=4410
         samples = np.sign(np.sin(2 * np.pi * freq * t))
     elif wave == "noise":
         samples = np.random.uniform(-1, 1, len(t))
-  
     fade = np.linspace(1, 0, len(t))
     samples = (samples * fade * volume * 32767).astype(np.int16)
     stereo = np.column_stack([samples, samples])
@@ -64,15 +55,15 @@ def make_tone(freq=440, duration=0.15, volume=0.4, wave="sine", sample_rate=4410
     return sound
 
 
-SND_CLICK       = make_tone(600,  0.08, 0.3, "sine")        
-SND_AVATAR_SEL  = make_tone(880,  0.12, 0.35, "sine")      
-SND_SWOOSH      = pygame.mixer.Sound("sfx/Swoosh.mp3")
-SND_AMONGUS     = pygame.mixer.Sound("sfx/amongus sound.mp3")
+SND_CLICK = make_tone(600, 0.08, 0.3, "sine")
+SND_AVATAR_SEL = make_tone(880, 0.12, 0.35, "sine")
+SND_SWOOSH = pygame.mixer.Sound("sfx/Swoosh.mp3")
+SND_AMONGUS = pygame.mixer.Sound("sfx/amongus sound.mp3")
 
-_MUSIC_AWAY      = "sfx/Away - Patrick Patrikios.mp3"
-_MUSIC_HYPNOSIS  = "sfx/Hypnosis - Godmode.mp3"
+_MUSIC_AWAY = "sfx/Away - Patrick Patrikios.mp3"
+_MUSIC_HYPNOSIS = "sfx/Hypnosis - Godmode.mp3"
 _MUSIC_NIGHTRIDE = "sfx/Night Ride - TrackTribe.mp3"
-_current_music   = None
+_current_music = None
 
 
 def _switch_music(path):
@@ -96,19 +87,20 @@ def _danger_active():
             return True
     return False
 
+
 ROLE_CLASS_MAP = {
-    "Player":                Player,
-    "Medic":                 Medic,
-    "Scientist":             Scientist,
-    "Researcher":            Researcher,
-    "Operations_Expert":     Operations_Expert,
-    "Dispatcher":            Dispatcher,
+    "Player": Player,
+    "Medic": Medic,
+    "Scientist": Scientist,
+    "Researcher": Researcher,
+    "Operations_Expert": Operations_Expert,
+    "Dispatcher": Dispatcher,
     "Quarantine_Specialist": Quarantine_Specialist,
-    "Contingency_Planner":   Contingency_Planner,
+    "Contingency_Planner": Contingency_Planner,
 }
 
-
 _ai_class_cache = {}
+
 
 def make_ai_player_class(role_cls):
     if role_cls in _ai_class_cache:
@@ -116,6 +108,7 @@ def make_ai_player_class(role_cls):
     ai_cls = type(f"{role_cls.__name__}", (AIPlayer, role_cls), {})
     _ai_class_cache[role_cls] = ai_cls
     return ai_cls
+
 
 def convert_to_ai(player):
     ai_cls = make_ai_player_class(type(player))
@@ -125,7 +118,9 @@ def convert_to_ai(player):
     new_p._players_ref = None
     return new_p
 
+
 AVATAR_SHEET_PATH = "assets/avatars.png"
+
 
 def _load_avatar_surfaces(sheet_path, cols=3, rows=3, target_px=92):
     sheet = pygame.image.load(sheet_path).convert_alpha()
@@ -141,11 +136,10 @@ def _load_avatar_surfaces(sheet_path, cols=3, rows=3, target_px=92):
             tiles.append(tile)
     return tiles
 
-    
-avatar_surfaces       = _load_avatar_surfaces(AVATAR_SHEET_PATH, cols=3, rows=3, target_px=92)
-avatar_surfaces_small = [pygame.transform.smoothscale(s, (64,  64))  for s in avatar_surfaces] if avatar_surfaces else []
-avatar_surfaces_grid  = [pygame.transform.smoothscale(s, (116, 116)) for s in avatar_surfaces] if avatar_surfaces else []
 
+avatar_surfaces = _load_avatar_surfaces(AVATAR_SHEET_PATH, cols=3, rows=3, target_px=92)
+avatar_surfaces_small = [pygame.transform.smoothscale(s, (64, 64)) for s in avatar_surfaces] if avatar_surfaces else []
+avatar_surfaces_grid = [pygame.transform.smoothscale(s, (116, 116)) for s in avatar_surfaces] if avatar_surfaces else []
 
 city_objects = {}
 for name, data in city_list.items():
@@ -162,60 +156,50 @@ def get_colour(colour_str):
     return {"Blue": (0,0,255), "Yellow": (150,150,0),
             "Black": (80,80,80), "Red": (255,0,0)}.get(colour_str, (255,255,255))
 
+
 def _list_to_csv_cell(lst):
-    """Encode a Python list as a pipe-separated string for one CSV cell."""
     return "|".join(str(x) for x in lst)
 
+
 def _csv_cell_to_list(cell):
-    """Decode a pipe-separated CSV cell back to a list of strings."""
     if not cell:
         return []
     return cell.split("|")
 
 
 def save_game():
-    """
-    CSV layout – each row is  section, key, value
-    Sections: META, BOARD, CITY_<name>, PLAYER_<i>
-    """
     rows = []
 
-
-    rows.append(["META", "turn",            str(turn)])
-    rows.append(["META", "num_players",     str(num_players)])
+    rows.append(["META", "turn", str(turn)])
+    rows.append(["META", "num_players", str(num_players)])
     rows.append(["META", "selected_difficulty", str(selected_difficulty)])
 
-
-    rows.append(["BOARD", "outbreak_counter",  str(Pandemic_Game.outbreak_counter)])
-    rows.append(["BOARD", "epidemic_count",    str(Pandemic_Game.epidemic_count)])
-    rows.append(["BOARD", "infection_rate",    str(Pandemic_Game.infection_rate)])
-    rows.append(["BOARD", "cures",             _list_to_csv_cell(Pandemic_Game.cures)])
-    rows.append(["BOARD", "eradicated",        _list_to_csv_cell(Pandemic_Game.eradicated)])
-    rows.append(["BOARD", "city_cards",        _list_to_csv_cell(Pandemic_Game.city_cards)])
-    rows.append(["BOARD", "infection_cards",   _list_to_csv_cell(Pandemic_Game.infection_cards)])
+    rows.append(["BOARD", "outbreak_counter", str(Pandemic_Game.outbreak_counter)])
+    rows.append(["BOARD", "epidemic_count", str(Pandemic_Game.epidemic_count)])
+    rows.append(["BOARD", "infection_rate", str(Pandemic_Game.infection_rate)])
+    rows.append(["BOARD", "cures", _list_to_csv_cell(Pandemic_Game.cures)])
+    rows.append(["BOARD", "eradicated", _list_to_csv_cell(Pandemic_Game.eradicated)])
+    rows.append(["BOARD", "city_cards", _list_to_csv_cell(Pandemic_Game.city_cards)])
+    rows.append(["BOARD", "infection_cards", _list_to_csv_cell(Pandemic_Game.infection_cards)])
     rows.append(["BOARD", "infection_discard", _list_to_csv_cell(Pandemic_Game.infection_card_discard_pile)])
-    rows.append(["BOARD", "player_discard",    _list_to_csv_cell(Pandemic_Game.player_discard_pile)])
-    rows.append(["BOARD", "quiet_night",       str(int(getattr(Pandemic_Game, "quiet_night_active", False)))])
-
+    rows.append(["BOARD", "player_discard", _list_to_csv_cell(Pandemic_Game.player_discard_pile)])
+    rows.append(["BOARD", "quiet_night", str(int(getattr(Pandemic_Game, "quiet_night_active", False)))])
 
     for cname, city in city_objects.items():
         section = f"CITY_{cname}"
-        rows.append([section, "virus",           _list_to_csv_cell(city.virus)])
+        rows.append([section, "virus", _list_to_csv_cell(city.virus)])
         rows.append([section, "research_center", str(int(city.research_center))])
-
 
     for i, p in enumerate(players):
         section = f"PLAYER_{i}"
-        rows.append([section, "name",       p.name])
-        rows.append([section, "role",       type(p).__name__])
-        rows.append([section, "city",       p.city])
-        rows.append([section, "actions",    str(p.actions)])
-        rows.append([section, "cards",      _list_to_csv_cell(p.cards)])
+        rows.append([section, "name", p.name])
+        rows.append([section, "role", type(p).__name__])
+        rows.append([section, "city", p.city])
+        rows.append([section, "actions", str(p.actions)])
+        rows.append([section, "cards", _list_to_csv_cell(p.cards)])
         rows.append([section, "avatar_idx", str(getattr(p, "avatar_idx", 0))])
-        rows.append([section, "ops_used",
-                     str(int(getattr(p, "ops_expert_special_move_used", False)))])
-        rows.append([section, "stored_event",
-                     str(getattr(p, "stored_event_card", "") or "")])
+        rows.append([section, "ops_used", str(int(getattr(p, "ops_expert_special_move_used", False)))])
+        rows.append([section, "stored_event", str(getattr(p, "stored_event_card", "") or "")])
 
     with open(SAVE_FILE, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
@@ -225,7 +209,6 @@ def save_game():
 
 
 def load_game():
-    """Return True on success, False if no save file found."""
     global Pandemic_Game, players, turn, num_players, selected_difficulty
     global game_over, game_won, lose_reason, result_alpha
 
@@ -233,7 +216,6 @@ def load_game():
         print("[LOAD] No save file found.")
         return False
 
-    # Read all rows into a dict-of-dicts  { section: {key: value} }
     data = {}
     with open(SAVE_FILE, "r", newline="", encoding="utf-8") as f:
         reader = csv.reader(f)
@@ -243,57 +225,54 @@ def load_game():
             section, key, value = row[0], row[1], row[2]
             data.setdefault(section, {})[key] = value
 
-    meta  = data.get("META",  {})
+    meta = data.get("META", {})
     board = data.get("BOARD", {})
 
-
-    turn               = int(meta.get("turn", 0))
-    num_players        = int(meta.get("num_players", 2))
+    turn = int(meta.get("turn", 0))
+    num_players = int(meta.get("num_players", 2))
     selected_difficulty = int(meta.get("selected_difficulty", 0))
 
-
     for cname in city_list:
-        cd   = city_list[cname]
+        cd = city_list[cname]
         city = City(name=cname, connections=cd["connections"],
                     colour=cd["colour"], location=cd["location"])
         section = f"CITY_{cname}"
         if section in data:
-            city.virus          = [int(x) for x in _csv_cell_to_list(data[section].get("virus", "0|0|0|0"))]
+            city.virus = [int(x) for x in _csv_cell_to_list(data[section].get("virus", "0|0|0|0"))]
             city.research_center = bool(int(data[section].get("research_center", "0")))
         city_objects[cname] = city
 
-
     Pandemic_Game = Board.__new__(Board)
-    Pandemic_Game.outbreak_counter           = int(board.get("outbreak_counter", 0))
-    Pandemic_Game.epidemic_count             = int(board.get("epidemic_count", 0))
-    Pandemic_Game.infection_rate             = int(board.get("infection_rate", 2))
-    Pandemic_Game.infection_rate_track       = [2, 2, 2, 3, 3, 4, 4]
-    Pandemic_Game.cures                      = [x == "True" for x in _csv_cell_to_list(board.get("cures", "False|False|False|False"))]
-    Pandemic_Game.eradicated                 = [x == "True" for x in _csv_cell_to_list(board.get("eradicated", "False|False|False|False"))]
-    Pandemic_Game.city_cards                 = _csv_cell_to_list(board.get("city_cards", ""))
-    Pandemic_Game.infection_cards            = _csv_cell_to_list(board.get("infection_cards", ""))
+    Pandemic_Game.outbreak_counter = int(board.get("outbreak_counter", 0))
+    Pandemic_Game.epidemic_count = int(board.get("epidemic_count", 0))
+    Pandemic_Game.infection_rate = int(board.get("infection_rate", 2))
+    Pandemic_Game.infection_rate_track = [2, 2, 2, 3, 3, 4, 4]
+    Pandemic_Game.cures = [x == "True" for x in _csv_cell_to_list(board.get("cures", "False|False|False|False"))]
+    Pandemic_Game.eradicated = [x == "True" for x in _csv_cell_to_list(board.get("eradicated", "False|False|False|False"))]
+    Pandemic_Game.city_cards = _csv_cell_to_list(board.get("city_cards", ""))
+    Pandemic_Game.infection_cards = _csv_cell_to_list(board.get("infection_cards", ""))
     Pandemic_Game.infection_card_discard_pile = _csv_cell_to_list(board.get("infection_discard", ""))
-    Pandemic_Game.player_discard_pile        = _csv_cell_to_list(board.get("player_discard", ""))
-    Pandemic_Game.quiet_night_active         = bool(int(board.get("quiet_night", "0")))
-    Pandemic_Game.outbreak_animations        = []
-    Pandemic_Game.difficulty                 = selected_difficulty + 4
-    Pandemic_Game.snd_swoosh                 = SND_SWOOSH
+    Pandemic_Game.player_discard_pile = _csv_cell_to_list(board.get("player_discard", ""))
+    Pandemic_Game.quiet_night_active = bool(int(board.get("quiet_night", "0")))
+    Pandemic_Game.outbreak_animations = []
+    Pandemic_Game.difficulty = selected_difficulty + 4
+    Pandemic_Game.snd_swoosh = SND_SWOOSH
 
     players = []
     for i in range(num_players):
         section = f"PLAYER_{i}"
         if section not in data:
             break
-        pd   = data[section]
+        pd = data[section]
         role = pd.get("role", "Player")
-        cls  = ROLE_CLASS_MAP.get(role, Player)
+        cls = ROLE_CLASS_MAP.get(role, Player)
 
         p = cls.__new__(cls)
-        p.name       = pd.get("name", f"Player {i+1}")
-        p.city       = pd.get("city", "Atlanta")
-        p.actions    = int(pd.get("actions", 4))
-        p.cards      = _csv_cell_to_list(pd.get("cards", ""))
-        p.colour     = (255, 255, 255)
+        p.name = pd.get("name", f"Player {i+1}")
+        p.city = pd.get("city", "Atlanta")
+        p.actions = int(pd.get("actions", 4))
+        p.cards = _csv_cell_to_list(pd.get("cards", ""))
+        p.colour = (255, 255, 255)
         p.avatar_idx = int(pd.get("avatar_idx", 0))
         p.require_to_cure = 4 if isinstance(p, Scientist) else 5
         p.operations = False
@@ -306,9 +285,9 @@ def load_game():
 
         players.append(p)
 
-    game_over    = False
-    game_won     = False
-    lose_reason  = ""
+    game_over = False
+    game_won = False
+    lose_reason = ""
     result_alpha = 0
 
     _switch_music(_MUSIC_AWAY)
@@ -316,49 +295,50 @@ def load_game():
     return True
 
 
-players          = []
-player_options   = [2, 3, 4]
-selected_index   = 0
+players = []
+player_options = [2, 3, 4]
+selected_index = 0
 selected_difficulty = 0
-player_colors    = [(255,255,255), (0,255,0), (255,165,0), (255,0,255)]
-difficulties     = ["Easy", "Normal", "Hard"]
+player_colors = [(255,255,255), (0,255,0), (255,165,0), (255,0,255)]
+difficulties = ["Easy", "Normal", "Hard"]
 
 avatar_select_player_idx = 0
-avatar_grid_rects        = []
+avatar_grid_rects = []
 ai_toggle_rects = []
-player_is_ai  = [False, False, False, False]
+player_is_ai = [False, False, False, False]
 ai_last_move_time = 0
-AI_MOVE_DELAY = 250
+AI_MOVE_DELAY = 1000
 
 role_classes = [Medic, Scientist, Researcher, Dispatcher,
                 Contingency_Planner, Operations_Expert, Quarantine_Specialist]
 random.shuffle(role_classes)
 
-turn             = 0
-num_players      = 2
-target           = None
-dispatcher_move_other    = None
+turn = 0
+num_players = 2
+target = None
+dispatcher_move_other = None
 dispatcher_occupied_mode = False
 dispatcher_occupied_pawn = None
 
-share_popup      = None
-occupy_popup     = None
-discard_popup    = None
-event_popup      = None        
-pending_event    = None        
+share_popup = None
+occupy_popup = None
+discard_popup = None
+event_popup = None
+pending_event = None
 pending_end_turn = False
-action_buttons   = {}
+action_buttons = {}
 
-running      = True
-clock        = pygame.time.Clock()
-game_state   = [1, 0, 0, 0]   
-virus_angle  = 0.0
-game_over    = False
-game_won     = False
-lose_reason  = ""
+running = True
+clock = pygame.time.Clock()
+game_state = [1, 0, 0, 0]
+virus_angle = 0.0
+game_over = False
+game_won = False
+lose_reason = ""
 result_alpha = 0
 
-Pandemic_Game = None   
+Pandemic_Game = None
+
 
 def loading_screen():
     global selected_index, selected_difficulty
@@ -372,16 +352,16 @@ def loading_screen():
     players_text = smallfont.render("SELECT NUMBER OF PLAYERS", True, (180, 180, 180))
     screen.blit(players_text, (width/2 - players_text.get_width()/2, height/2.8))
 
-    radius  = 60
+    radius = 60
     circles = [
         (width//2 - 150, int(height/2+20), radius, 2),
         (width//2,       int(height/2+20), radius, 3),
         (width//2 + 150, int(height/2+20), radius, 4),
     ]
     for i, (x, y, r, n) in enumerate(circles):
-        color     = (255, 200, 0) if i == selected_index else (100, 100, 100)
-        pygame.draw.circle(screen, color,       (x, y), r + 5, 2)
-        pygame.draw.circle(screen, (30, 30, 30),(x, y), r)
+        color = (255, 200, 0) if i == selected_index else (100, 100, 100)
+        pygame.draw.circle(screen, color, (x, y), r + 5, 2)
+        pygame.draw.circle(screen, (30, 30, 30), (x, y), r)
         if i == selected_index:
             pygame.draw.circle(screen, (255, 200, 0), (x, y), r, 4)
         number_surface = largefont.render(str(n), True, color)
@@ -390,13 +370,13 @@ def loading_screen():
     diff_text = smallfont.render("SELECT DIFFICULTY", True, (180, 180, 180))
     screen.blit(diff_text, (width/2 - diff_text.get_width()/2, height/1.5))
 
-    diffs     = ["EASY", "NORMAL", "HARD"]
+    diffs = ["EASY", "NORMAL", "HARD"]
     btn_w, btn_h = 180, 60
     for i, diff in enumerate(diffs):
         diff_x = width//2 - 300 + i*210
         diff_y = int(height/1.3)
-        rect   = pygame.Rect(diff_x, diff_y, btn_w, btn_h)
-        color      = (200, 0, 0) if i == selected_difficulty else (60, 60, 60)
+        rect = pygame.Rect(diff_x, diff_y, btn_w, btn_h)
+        color = (200, 0, 0) if i == selected_difficulty else (60, 60, 60)
         text_color = (255, 255, 255) if i == selected_difficulty else (150, 150, 150)
         pygame.draw.rect(screen, (20, 20, 20), rect)
         pygame.draw.rect(screen, color, rect, 3)
@@ -405,10 +385,9 @@ def loading_screen():
         diff_surface = smallGunfont.render(diff, True, text_color)
         screen.blit(diff_surface, diff_surface.get_rect(center=rect.center))
 
-  
     save_exists = os.path.exists(SAVE_FILE)
-    load_rect   = pygame.Rect(width//2 - 110, int(height*0.86), 220, 52)
-    load_col    = (0, 140, 80) if save_exists else (50, 60, 60)
+    load_rect = pygame.Rect(width//2 - 110, int(height*0.86), 220, 52)
+    load_col = (0, 140, 80) if save_exists else (50, 60, 60)
     load_border = (0, 220, 120) if save_exists else (80, 90, 90)
     load_txt_col = (255,255,255) if save_exists else (100,100,100)
     pygame.draw.rect(screen, load_col, load_rect, border_radius=8)
@@ -424,14 +403,14 @@ def loading_screen():
                 selected_index = i
         for i, diff in enumerate(diffs):
             diff_x = width//2 - 300 + i*210
-            rect   = pygame.Rect(diff_x, int(height/1.3), btn_w, btn_h)
+            rect = pygame.Rect(diff_x, int(height/1.3), btn_w, btn_h)
             if rect.collidepoint(mouse_pos):
                 selected_difficulty = i
 
     instr_surface = cityfont.render("PRESS ENTER TO START MISSION", True, (100, 100, 100))
     screen.blit(instr_surface, (width/2 - instr_surface.get_width()/2, height - 40))
 
-    return load_rect   
+    return load_rect
 
 
 def avatar_select_screen():
@@ -442,16 +421,16 @@ def avatar_select_screen():
     screen.blit(title, (width//2 - title.get_width()//2, 48))
 
     cur_player = players[avatar_select_player_idx]
-    accent     = ROLE_ACCENT.get(type(cur_player).__name__, (200, 0, 0))
-    chosen     = {p.avatar_idx for p in players if getattr(p, "avatar_idx", None) is not None}
+    accent = ROLE_ACCENT.get(type(cur_player).__name__, (200, 0, 0))
+    chosen = {p.avatar_idx for p in players if getattr(p, "avatar_idx", None) is not None}
 
     left_x, top_y, row_h, thumb = 120, 175, 104, 64
     ai_toggle_rects = []
     for i, p in enumerate(players):
-        row_y     = top_y + i * row_h
+        row_y = top_y + i * row_h
         row_accent = ROLE_ACCENT.get(type(p).__name__, (140, 140, 140))
-        row_rect   = pygame.Rect(left_x - 14, row_y - 10, 420, row_h - 12)
-        is_active  = (i == avatar_select_player_idx)
+        row_rect = pygame.Rect(left_x - 14, row_y - 10, 420, row_h - 12)
+        is_active = (i == avatar_select_player_idx)
         pygame.draw.rect(screen, (18, 24, 34) if is_active else (14, 18, 26), row_rect, border_radius=12)
         pygame.draw.rect(screen, row_accent if is_active else (50, 60, 78), row_rect, 2 if is_active else 1, border_radius=12)
         name_col = (255, 255, 255) if is_active else (200, 200, 200)
@@ -483,19 +462,19 @@ def avatar_select_screen():
                 pygame.draw.rect(screen, row_accent,
                                  pygame.Rect(tx-4, ty-4, thumb+8, thumb+8), 2, border_radius=10)
 
-    grid_cols, cell, gap  = 3, 140, 26
-    grid_x, grid_y        = width//2 + 120, 200
-    avatar_grid_rects     = []
-    cur_idx               = getattr(cur_player, "avatar_idx", None)
-    cur_is_ai             = player_is_ai[avatar_select_player_idx]
+    grid_cols, cell, gap = 3, 140, 26
+    grid_x, grid_y = width//2 + 120, 200
+    avatar_grid_rects = []
+    cur_idx = getattr(cur_player, "avatar_idx", None)
+    cur_is_ai = player_is_ai[avatar_select_player_idx]
     for idx, surf in enumerate(avatar_surfaces_grid if avatar_surfaces_grid else avatar_surfaces):
-        r  = idx // grid_cols
-        c  = idx  % grid_cols
-        x  = grid_x + c * (cell + gap)
-        y  = grid_y + r * (cell + gap)
+        r = idx // grid_cols
+        c = idx % grid_cols
+        x = grid_x + c * (cell + gap)
+        y = grid_y + r * (cell + gap)
         rect = pygame.Rect(x, y, cell, cell)
         avatar_grid_rects.append((rect, idx))
-        hovered        = rect.collidepoint(pygame.mouse.get_pos()) and not cur_is_ai
+        hovered = rect.collidepoint(pygame.mouse.get_pos()) and not cur_is_ai
         taken_by_other = (idx in chosen) and (cur_idx != idx)
         bg = (16, 20, 28) if (taken_by_other or cur_is_ai) else ((35, 45, 62) if hovered else (24, 30, 42))
         border = (55, 60, 70) if (taken_by_other or cur_is_ai) else (accent if hovered else (70, 85, 105))
@@ -516,10 +495,10 @@ def avatar_select_screen():
         ai_msg = tinyGunfont.render("CPU player — avatar auto-assigned", True, (120, 220, 140))
         screen.blit(ai_msg, ai_msg.get_rect(center=(grid_x + (grid_cols * (cell + gap)) // 2, grid_y + 220)))
 
-    all_set   = all(getattr(p, "avatar_idx", None) is not None for p in players)
+    all_set = all(getattr(p, "avatar_idx", None) is not None for p in players)
     instr_txt = "All set — press Enter to begin." if all_set else "One avatar per player — no duplicates."
     instr_col = (220,224,230) if all_set else (175,185,198)
-    instr     = avatar_footer_font.render(instr_txt, True, instr_col)
+    instr = avatar_footer_font.render(instr_txt, True, instr_col)
     screen.blit(instr, (width//2 - instr.get_width()//2, height - 88))
 
 
@@ -568,7 +547,6 @@ def end_turn(player):
 
     turn += 1
 
-   
     save_game()
 
     for p in players:
@@ -583,16 +561,14 @@ def player_test(click_event=None):
     global share_popup, discard_popup, occupy_popup, pending_end_turn
     global event_popup, pending_event
 
-    mouse_pos    = pygame.mouse.get_pos()
+    mouse_pos = pygame.mouse.get_pos()
     active_player = players[turn % num_players]
     has_event_card = any(card in EVENT_CARDS for card in active_player.cards)
-    
-  
+
     if isinstance(active_player, Contingency_Planner):
         if getattr(active_player, "stored_event_card", None):
             has_event_card = True
 
-   
     if discard_popup is not None:
         if click_event and discard_popup.get("card_rects"):
             for crect, card in discard_popup["card_rects"]:
@@ -602,28 +578,26 @@ def player_test(click_event=None):
                     if len(discard_popup["player"].cards) > 7:
                         discard_popup["card_rects"] = []
                     else:
-                        discard_popup    = None
+                        discard_popup = None
                         pending_end_turn = False
                     break
         return
 
-    
     if occupy_popup is not None:
         if click_event and occupy_popup.get("rects"):
             for key, val in occupy_popup["rects"].items():
                 rect, chosen_player = val
                 if rect.collidepoint(mouse_pos):
                     if key == "cancel":
-                        occupy_popup             = None
+                        occupy_popup = None
                         dispatcher_occupied_mode = False
                         dispatcher_occupied_pawn = None
                     elif chosen_player is not None:
                         dispatcher_occupied_pawn = chosen_player
-                        occupy_popup             = None
+                        occupy_popup = None
                     break
         return
 
-    
     if share_popup is not None:
         if click_event and share_popup.get("rects"):
             for key, val in share_popup["rects"].items():
@@ -636,21 +610,18 @@ def player_test(click_event=None):
                         share_popup = None
                     break
         return
-    
-   
+
     if pending_event is not None:
         if click_event:
             card_name = pending_event["card"]
-            step      = pending_event.get("step", 1)
-            rects     = pending_event.get("rects", {})
+            step = pending_event.get("step", 1)
+            rects = pending_event.get("rects", {})
 
-            
             cancel_rect = pending_event.get("cancel_rect")
             if cancel_rect and cancel_rect.collidepoint(mouse_pos):
                 pending_event = None
                 return
 
-       
             if card_name == "Airlift" and step == 1:
                 for key, val in rects.items():
                     if key == "cancel":
@@ -664,30 +635,25 @@ def player_test(click_event=None):
                             pending_event["step"] = 2
                             return
 
-            
             elif card_name in ("Airlift", "Government Grant") and step == 2:
                 for cname, city in city_objects.items():
                     dist = ((mouse_pos[0]-city.location[0])**2 +
                             (mouse_pos[1]-city.location[1])**2)**0.5
                     if dist < 20:
                         player_idx = pending_event.get("player_idx", turn % num_players)
-                        actor      = players[player_idx]
+                        actor = players[player_idx]
                         if card_name == "Airlift":
-                            t_idx  = pending_event.get("target_player_idx", player_idx)
+                            t_idx = pending_event.get("target_player_idx", player_idx)
                             target_pawn = players[t_idx]
-                            actor.use_event_card("Airlift", Pandemic_Game, city_objects,
-                                                 cname, None)
-                            # move whichever pawn was selected
+                            actor.use_event_card("Airlift", Pandemic_Game, city_objects, cname, None)
                             target_pawn.city = cname
                             if isinstance(target_pawn, Medic):
                                 target_pawn.auto_remove_cured_cubes(city_objects, Pandemic_Game)
                         else:
-                            actor.use_event_card("Government Grant", Pandemic_Game, city_objects,
-                                                 cname, None)
+                            actor.use_event_card("Government Grant", Pandemic_Game, city_objects, cname, None)
                         pending_event = None
                         return
 
-           
             elif card_name == "Resilient Population":
                 for key, val in rects.items():
                     if key == "cancel":
@@ -698,7 +664,7 @@ def player_test(click_event=None):
                         brect, city_name = val
                         if brect.collidepoint(mouse_pos):
                             player_idx = pending_event.get("player_idx", turn % num_players)
-                            actor      = players[player_idx]
+                            actor = players[player_idx]
                             actor.use_event_card("Resilient Population", Pandemic_Game,
                                                  city_objects, city_name, None)
                             pending_event = None
@@ -706,17 +672,16 @@ def player_test(click_event=None):
 
             elif card_name == "Forecast":
                 confirm = rects.get("confirm")
-                cancel  = rects.get("cancel")
+                cancel = rects.get("cancel")
                 if confirm and confirm[0].collidepoint(mouse_pos):
                     player_idx = pending_event.get("player_idx", turn % num_players)
-                    actor      = players[player_idx]
+                    actor = players[player_idx]
                     actor.use_event_card("Forecast", Pandemic_Game, city_objects, None, None)
                     pending_event = None
                 elif cancel and cancel[0].collidepoint(mouse_pos):
                     pending_event = None
         return
 
-    
     if event_popup is not None:
         if click_event and event_popup.get("rects"):
             for key, val in event_popup["rects"].items():
@@ -727,7 +692,7 @@ def player_test(click_event=None):
                         return
                     if card_name is not None:
                         event_popup = None
-                        player_idx  = turn % num_players
+                        player_idx = turn % num_players
                         if card_name in ("Government Grant", "Resilient Population"):
                             pending_event = {"card": card_name, "player_idx": player_idx,
                                              "step": 2, "rects": {}}
@@ -738,7 +703,6 @@ def player_test(click_event=None):
                             pending_event = {"card": card_name, "player_idx": player_idx,
                                              "step": 1, "rects": {}}
                         else:
-                            # One Quiet Night – play immediately
                             actor = players[player_idx]
                             if is_stored and isinstance(actor, Contingency_Planner):
                                 actor.use_event_card(card_name, Pandemic_Game, city_objects, None, None)
@@ -747,7 +711,6 @@ def player_test(click_event=None):
                     return
         return
 
-    
     moved_or_acted = False
 
     if click_event and action_buttons:
@@ -760,7 +723,7 @@ def player_test(click_event=None):
                         event_popup = {
                             "player": active_player,
                             "rects": {},
-                            "phase": "select" 
+                            "phase": "select"
                         }
                     else:
                         print("No event cards available!")
@@ -768,8 +731,8 @@ def player_test(click_event=None):
                 if btn_key == "treat":
                     SND_CLICK.play()
                     colour_order = ["Blue","Yellow","Black","Red"]
-                    native       = current_city.colour
-                    native_idx   = colour_order.index(native)
+                    native = current_city.colour
+                    native_idx = colour_order.index(native)
                     if current_city.virus[native_idx] > 0:
                         treat_colour = native
                     else:
@@ -806,7 +769,6 @@ def player_test(click_event=None):
                     if others:
                         share_popup = {"rects": {}}
 
-
                 elif btn_key == "skip":
                     SND_CLICK.play()
                     if active_player.actions > 0:
@@ -820,7 +782,6 @@ def player_test(click_event=None):
                         occupy_popup = {"rects": {}}
                 break
 
-   
     if click_event:
         for city_name, city in city_objects.items():
             dist = ((mouse_pos[0]-city.location[0])**2 +
@@ -905,9 +866,11 @@ def player_test(click_event=None):
 
     if active_player.actions == 0:
         end_turn(active_player)
+
+
 turn = 0
 target = None
-load_button_rect = None  
+load_button_rect = None
 dispatcher_move_other = None
 dispatcher_occupied_mode = False
 dispatcher_occupied_pawn = None
@@ -926,8 +889,7 @@ lose_reason = ""
 result_alpha = 0
 ai_last_move_time = 0
 
-
-load_button_rect = None  
+load_button_rect = None
 
 while running:
     click_event = False
@@ -936,21 +898,18 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
-       
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             click_event = True
             mx, my = pygame.mouse.get_pos()
 
-      
             if game_state[0] == 1 and load_button_rect and load_button_rect.collidepoint((mx, my)):
                 if os.path.exists(SAVE_FILE):
                     if load_game():
-                        game_state[0] = 0   
+                        game_state[0] = 0
 
-          
             elif game_state[0] == 2 and players and avatar_surfaces:
-                chosen  = {p.avatar_idx for p in players if getattr(p, "avatar_idx", None) is not None}
-                cur     = players[avatar_select_player_idx]
+                chosen = {p.avatar_idx for p in players if getattr(p, "avatar_idx", None) is not None}
+                cur = players[avatar_select_player_idx]
                 cur_idx = getattr(cur, "avatar_idx", None)
 
                 tog_clicked = False
@@ -998,7 +957,6 @@ while running:
                                                             if next_idx is None else next_idx)
                                 break
 
-       
         elif event.type == pygame.KEYDOWN:
 
             if game_state[0] == 1:
@@ -1007,13 +965,13 @@ while running:
                     Pandemic_Game = Board(city_objects, difficulty=selected_difficulty)
                     Pandemic_Game.set_board(city_objects)
                     Pandemic_Game.snd_swoosh = SND_SWOOSH
-  
+
                     for ec in EVENT_CARDS:
                         Pandemic_Game.city_cards.append(ec)
                     random.shuffle(Pandemic_Game.city_cards)
 
                     num_players = player_options[selected_index]
-                    players     = []
+                    players = []
                     random.shuffle(role_classes)
                     for i in range(num_players):
                         new_player = role_classes[i](
@@ -1038,7 +996,7 @@ while running:
                         SND_AMONGUS.play()
                         _switch_music(_MUSIC_AWAY)
                 elif event.key == pygame.K_ESCAPE:
-                    players      = []
+                    players = []
                     for i in range(4):
                         player_is_ai[i] = False
                     game_state[0] = 1
@@ -1049,14 +1007,13 @@ while running:
                 elif event.key == pygame.K_ESCAPE and game_over:
                     running = False
                 elif event.key == pygame.K_r and game_over:
-                    # Reset
-                    game_over    = False
-                    game_won     = False
-                    lose_reason  = ""
+                    game_over = False
+                    game_won = False
+                    lose_reason = ""
                     result_alpha = 0
-                    turn         = 0
-                    players      = []
-                    event_popup  = None
+                    turn = 0
+                    players = []
+                    event_popup = None
                     pending_event = None
                     for i in range(4):
                         player_is_ai[i] = False
@@ -1070,7 +1027,6 @@ while running:
                     city_objects["Atlanta"].research_center = True
                     game_state[0] = 1
 
-    
     if game_state[0] == 1:
         _switch_music(_MUSIC_NIGHTRIDE)
         load_button_rect = loading_screen()
@@ -1113,7 +1069,7 @@ while running:
                 p = discard_popup["player"]
                 p.auto_discard(city_objects, Pandemic_Game, players)
                 if len(p.cards) <= 7:
-                    discard_popup    = None
+                    discard_popup = None
                     pending_end_turn = False
 
             if isinstance(active_player, AIPlayer):
@@ -1131,22 +1087,22 @@ while running:
                             p = discard_popup["player"]
                             p.auto_discard(city_objects, Pandemic_Game, players)
                             if len(p.cards) <= 7:
-                                discard_popup    = None
+                                discard_popup = None
                                 pending_end_turn = False
                     ai_last_move_time = now
             else:
                 player_test(click_event)
 
-            share_popup   = draw_share_popup(screen, share_popup, players, turn,
-                                             width, height, smallGunfont, tinyGunfont)
-            occupy_popup  = draw_occupy_popup(screen, occupy_popup, players, turn,
-                                              width, height, tinyGunfont)
+            share_popup = draw_share_popup(screen, share_popup, players, turn,
+                                           width, height, smallGunfont, tinyGunfont)
+            occupy_popup = draw_occupy_popup(screen, occupy_popup, players, turn,
+                                             width, height, tinyGunfont)
             discard_popup = draw_discard_popup(screen, discard_popup, city_objects,
                                                width, height, smallGunfont, tinyGunfont,
                                                cityfont, get_colour)
-            event_popup   = draw_event_popup(screen, event_popup, players, turn,
-                                             city_objects, Pandemic_Game,
-                                             width, height, tinyGunfont, cityfont)
+            event_popup = draw_event_popup(screen, event_popup, players, turn,
+                                           city_objects, Pandemic_Game,
+                                           width, height, tinyGunfont, cityfont)
             pending_event = draw_event_target_popup(screen, pending_event, players,
                                                     Pandemic_Game, city_objects,
                                                     width, height, tinyGunfont, cityfont)
