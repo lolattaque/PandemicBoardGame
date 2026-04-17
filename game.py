@@ -22,6 +22,7 @@ from players import (
 )
 from cities import City, city_list, draw_connections, draw_cities, draw_movement_highlights
 from board import Board, draw_board, draw_outbreak_animations, draw_result_screen
+from model.rule_based import AIPlayer
 
 pygame.init()
 pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
@@ -77,6 +78,23 @@ ROLE_CLASS_MAP = {
     "Contingency_Planner":   Contingency_Planner,
 }
 
+
+_ai_class_cache = {}
+
+def make_ai_player_class(role_cls):
+    if role_cls in _ai_class_cache:
+        return _ai_class_cache[role_cls]
+    ai_cls = type(f"{role_cls.__name__}", (AIPlayer, role_cls), {})
+    _ai_class_cache[role_cls] = ai_cls
+    return ai_cls
+
+def convert_to_ai(player):
+    ai_cls = make_ai_player_class(type(player))
+    new_p = ai_cls.__new__(ai_cls)
+    new_p.__dict__.update(player.__dict__)
+    new_p._city_objects_ref = None
+    new_p._players_ref = None
+    return new_p
 
 AVATAR_SHEET_PATH = "assets/avatars.png"
 
@@ -276,6 +294,10 @@ difficulties     = ["Easy", "Normal", "Hard"]
 
 avatar_select_player_idx = 0
 avatar_grid_rects        = []
+ai_toggle_rects = []
+player_is_ai  = [False, False, False, False]
+ai_last_move_time = 0
+AI_MOVE_DELAY = 250
 
 role_classes = [Medic, Scientist, Researcher, Dispatcher,
                 Contingency_Planner, Operations_Expert, Quarantine_Specialist]
@@ -382,7 +404,7 @@ def loading_screen():
 
 
 def avatar_select_screen():
-    global avatar_select_player_idx, avatar_grid_rects
+    global avatar_select_player_idx, avatar_grid_rects, ai_toggle_rects
     screen.fill((10, 20, 30))
 
     title = largeGunfont.render("CHOOSE AVATARS", True, (235, 235, 235))
@@ -393,20 +415,34 @@ def avatar_select_screen():
     chosen     = {p.avatar_idx for p in players if getattr(p, "avatar_idx", None) is not None}
 
     left_x, top_y, row_h, thumb = 120, 175, 104, 64
+    ai_toggle_rects = []
     for i, p in enumerate(players):
         row_y     = top_y + i * row_h
         row_accent = ROLE_ACCENT.get(type(p).__name__, (140, 140, 140))
         row_rect   = pygame.Rect(left_x - 14, row_y - 10, 420, row_h - 12)
-        if i == avatar_select_player_idx:
-            pygame.draw.rect(screen, (18, 24, 34),   row_rect, border_radius=12)
-            pygame.draw.rect(screen, row_accent,     row_rect, 2, border_radius=12)
-        else:
-            pygame.draw.rect(screen, (14, 18, 26),   row_rect, border_radius=12)
-            pygame.draw.rect(screen, (50, 60, 78),   row_rect, 1, border_radius=12)
-        name_s = smallfont.render(p.name,  True, (255,255,255) if i == avatar_select_player_idx else (200,200,200))
-        role_s = tinyGunfont.render(type(p).__name__.replace("_"," "), True, row_accent)
+        is_active  = (i == avatar_select_player_idx)
+        pygame.draw.rect(screen, (18, 24, 34) if is_active else (14, 18, 26), row_rect, border_radius=12)
+        pygame.draw.rect(screen, row_accent if is_active else (50, 60, 78), row_rect, 2 if is_active else 1, border_radius=12)
+        name_col = (255, 255, 255) if is_active else (200, 200, 200)
+        name_s = smallfont.render(p.name, True, name_col)
+        role_s = cityfont.render(type(p).__name__.replace("_", " ").upper(), True, row_accent)
         screen.blit(name_s, (left_x + 12, row_y))
-        screen.blit(role_s, (left_x + 14, row_y + 48))
+        screen.blit(role_s, (left_x + 14, row_y + 50))
+        tog_w, tog_h = 82, 32
+        tog_x = row_rect.right - thumb - 26 - tog_w
+        tog_y = row_rect.centery - tog_h // 2
+        tog_rect = pygame.Rect(tog_x, tog_y, tog_w, tog_h)
+        ai_toggle_rects.append((tog_rect, i))
+        is_ai_flag = player_is_ai[i]
+        tog_bg = (30, 80, 50) if is_ai_flag else (60, 30, 30)
+        tog_border = (60, 180, 90) if is_ai_flag else (180, 60, 60)
+        tog_label = "CPU" if is_ai_flag else "HUM"
+        tog_tcol = (120, 255, 140) if is_ai_flag else (255, 120, 120)
+        pygame.draw.rect(screen, tog_bg, tog_rect, border_radius=6)
+        pygame.draw.rect(screen, tog_border, tog_rect, 2, border_radius=6)
+        ts = tinyGunfont.render(tog_label, True, tog_tcol)
+        screen.blit(ts, ts.get_rect(center=tog_rect.center))
+
         if getattr(p, "avatar_idx", None) is not None and avatar_surfaces_small:
             idx = p.avatar_idx
             if isinstance(idx, int) and 0 <= idx < len(avatar_surfaces_small):
@@ -420,6 +456,7 @@ def avatar_select_screen():
     grid_x, grid_y        = width//2 + 120, 200
     avatar_grid_rects     = []
     cur_idx               = getattr(cur_player, "avatar_idx", None)
+    cur_is_ai             = player_is_ai[avatar_select_player_idx]
     for idx, surf in enumerate(avatar_surfaces_grid if avatar_surfaces_grid else avatar_surfaces):
         r  = idx // grid_cols
         c  = idx  % grid_cols
@@ -427,13 +464,12 @@ def avatar_select_screen():
         y  = grid_y + r * (cell + gap)
         rect = pygame.Rect(x, y, cell, cell)
         avatar_grid_rects.append((rect, idx))
-        hovered        = rect.collidepoint(pygame.mouse.get_pos())
+        hovered        = rect.collidepoint(pygame.mouse.get_pos()) and not cur_is_ai
         taken_by_other = (idx in chosen) and (cur_idx != idx)
-
-        bg     = (16,20,28)         if taken_by_other else ((35,45,62) if hovered else (24,30,42))
-        border = (55,60,70)         if taken_by_other else (accent if hovered else (70,85,105))
-        pygame.draw.rect(screen, bg,     rect, border_radius=16)
-        pygame.draw.rect(screen, border, rect, 3 if hovered and not taken_by_other else 2, border_radius=16)
+        bg = (16, 20, 28) if (taken_by_other or cur_is_ai) else ((35, 45, 62) if hovered else (24, 30, 42))
+        border = (55, 60, 70) if (taken_by_other or cur_is_ai) else (accent if hovered else (70, 85, 105))
+        pygame.draw.rect(screen, bg, rect, border_radius=16)
+        pygame.draw.rect(screen, border, rect, 3 if hovered else 2, border_radius=16)
         if surf:
             screen.blit(surf, surf.get_rect(center=rect.center))
         if taken_by_other:
@@ -444,6 +480,10 @@ def avatar_select_screen():
             screen.blit(lock, lock.get_rect(center=rect.center))
         if cur_idx == idx:
             pygame.draw.rect(screen, (255,230,150), rect.inflate(-10,-10), 3, border_radius=14)
+
+    if cur_is_ai:
+        ai_msg = tinyGunfont.render("CPU player — avatar auto-assigned", True, (120, 220, 140))
+        screen.blit(ai_msg, ai_msg.get_rect(center=(grid_x + (grid_cols * (cell + gap)) // 2, grid_y + 220)))
 
     all_set   = all(getattr(p, "avatar_idx", None) is not None for p in players)
     instr_txt = "All set — press Enter to begin." if all_set else "One avatar per player — no duplicates."
@@ -853,6 +893,7 @@ game_over = False
 game_won = False
 lose_reason = ""
 result_alpha = 0
+ai_last_move_time = 0
 
 
 load_button_rect = None  
@@ -880,21 +921,51 @@ while running:
                 chosen  = {p.avatar_idx for p in players if getattr(p, "avatar_idx", None) is not None}
                 cur     = players[avatar_select_player_idx]
                 cur_idx = getattr(cur, "avatar_idx", None)
-                for rect, aidx in avatar_grid_rects:
-                    if rect.collidepoint((mx, my)):
-                        if (aidx in chosen) and (cur_idx != aidx):
-                            break
-                        players[avatar_select_player_idx].avatar_idx = aidx
-                        SND_AVATAR_SEL.play()
-                        next_idx = None
-                        for step in range(1, len(players)+1):
-                            j = (avatar_select_player_idx + step) % len(players)
-                            if getattr(players[j], "avatar_idx", None) is None:
-                                next_idx = j
-                                break
-                        avatar_select_player_idx = (avatar_select_player_idx
-                                                    if next_idx is None else next_idx)
+
+                tog_clicked = False
+                for tog_rect, pidx in ai_toggle_rects:
+                    if tog_rect.collidepoint((mx, my)):
+                        tog_clicked = True
+                        SND_CLICK.play()
+                        player_is_ai[pidx] = not player_is_ai[pidx]
+                        if player_is_ai[pidx]:
+                            used = {p.avatar_idx for p in players if getattr(p, "avatar_idx", None) is not None}
+                            for a in range(len(avatar_surfaces)):
+                                if a not in used:
+                                    players[pidx].avatar_idx = a
+                                    break
+                            next_human = None
+                            for step in range(1, len(players) + 1):
+                                j = (pidx + step) % len(players)
+                                if not player_is_ai[j] and getattr(players[j], "avatar_idx", None) is None:
+                                    next_human = j
+                                    break
+                            if next_human is not None:
+                                avatar_select_player_idx = next_human
+                        else:
+                            players[pidx].avatar_idx = None
+                            avatar_select_player_idx = pidx
                         break
+
+                if not tog_clicked:
+                    if player_is_ai[avatar_select_player_idx]:
+                        pass
+                    else:
+                        for rect, aidx in avatar_grid_rects:
+                            if rect.collidepoint((mx, my)):
+                                if (aidx in chosen) and (cur_idx != aidx):
+                                    break
+                                players[avatar_select_player_idx].avatar_idx = aidx
+                                SND_AVATAR_SEL.play()
+                                next_idx = None
+                                for step in range(1, len(players) + 1):
+                                    j = (avatar_select_player_idx + step) % len(players)
+                                    if not player_is_ai[j] and getattr(players[j], "avatar_idx", None) is None:
+                                        next_idx = j
+                                        break
+                                avatar_select_player_idx = (avatar_select_player_idx
+                                                            if next_idx is None else next_idx)
+                                break
 
        
         elif event.type == pygame.KEYDOWN:
@@ -927,9 +998,15 @@ while running:
             elif game_state[0] == 2:
                 if event.key == pygame.K_RETURN:
                     if players and all(getattr(p, "avatar_idx", None) is not None for p in players):
+                        for i in range(len(players)):
+                            if player_is_ai[i]:
+                                players[i] = convert_to_ai(players[i])
+                                players[i].name = f"CPU {i + 1}"
                         game_state[0] = 0
                 elif event.key == pygame.K_ESCAPE:
                     players      = []
+                    for i in range(4):
+                        player_is_ai[i] = False
                     game_state[0] = 1
 
             else:
@@ -947,6 +1024,8 @@ while running:
                     players      = []
                     event_popup  = None
                     pending_event = None
+                    for i in range(4):
+                        player_is_ai[i] = False
                     for name, data in city_list.items():
                         city_objects[name] = City(
                             name=name,
@@ -990,9 +1069,36 @@ while running:
         )
 
         if not game_over:
-            player_test(click_event)
+            active_player = players[turn % num_players]
 
-           
+            while discard_popup and isinstance(discard_popup.get("player"), AIPlayer):
+                p = discard_popup["player"]
+                p.auto_discard(city_objects, Pandemic_Game, players)
+                if len(p.cards) <= 7:
+                    discard_popup    = None
+                    pending_end_turn = False
+
+            if isinstance(active_player, AIPlayer):
+                now = pygame.time.get_ticks()
+                if not discard_popup and now - ai_last_move_time >= AI_MOVE_DELAY:
+                    active_player._city_objects_ref = city_objects
+                    active_player._players_ref = players
+                    if active_player.actions > 0:
+                        taken = active_player._decide_action(city_objects, Pandemic_Game, players)
+                        if not taken:
+                            active_player.actions = 0
+                    if active_player.actions == 0:
+                        end_turn(active_player)
+                        while discard_popup and isinstance(discard_popup.get("player"), AIPlayer):
+                            p = discard_popup["player"]
+                            p.auto_discard(city_objects, Pandemic_Game, players)
+                            if len(p.cards) <= 7:
+                                discard_popup    = None
+                                pending_end_turn = False
+                    ai_last_move_time = now
+            else:
+                player_test(click_event)
+
             share_popup   = draw_share_popup(screen, share_popup, players, turn,
                                              width, height, smallGunfont, tinyGunfont)
             occupy_popup  = draw_occupy_popup(screen, occupy_popup, players, turn,

@@ -3,3 +3,4 @@ __pycache__/
 tempCodeRunnerFile.py
 model/checkpoints/
 model/tensorboard/
+pandemic_save.csv

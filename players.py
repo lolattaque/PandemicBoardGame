@@ -443,7 +443,7 @@ def draw_current_player_panel(screen, players, city_objects, board, turn, num_pl
 
     screen.blit(tinyGunfont.render(active_player.name, True, TEXT_WHITE), (panel_x + 12, 10))
     role_name = type(active_player).__name__.replace("_", " ")
-    screen.blit(tinyGunfont.render(role_name, True, accent), (panel_x + 12, 36))
+    screen.blit(cityfont.render(role_name, True, accent), (panel_x + 12, 36))
     if avatar_surfaces is not None and getattr(active_player, "avatar_idx", None) is not None:
         idx = active_player.avatar_idx
         if isinstance(idx, int) and 0 <= idx < len(avatar_surfaces):
@@ -523,31 +523,6 @@ def draw_current_player_panel(screen, players, city_objects, board, turn, num_pl
             screen.blit(mode_txt, (btn_x, mode_y))
 
     return action_buttons
-def draw_event_popup(screen, player, width, height, font):
-    import pygame
-    
-    event_cards = [c for c in player.cards if c in EVENT_CARDS]
-    if not event_cards:
-        return None
-
-    popup_rect = pygame.Rect(width//2 - 200, height//2 - 150, 400, 300)
-    pygame.draw.rect(screen, (30, 40, 55), popup_rect, border_radius=10)
-
-    buttons = {}
-
-    for i, card in enumerate(event_cards):
-        rect = pygame.Rect(popup_rect.x + 20, popup_rect.y + 40 + i*50, 360, 40)
-        pygame.draw.rect(screen, (70, 90, 120), rect, border_radius=6)
-        
-        text = font.render(card, True, (255,255,255))
-        screen.blit(text, (rect.x + 10, rect.y + 10))
-        
-        desc = font.render(EVENT_CARD_DESCS.get(card, ""), True, (180,180,180))
-        screen.blit(desc, (rect.x + 10, rect.y + 25))
-
-        buttons[card] = rect
-
-    return buttons
 
 
 def player_cards_display(screen, players, city_objects, width, height, smallGunfont, cityfont, get_colour_fn, avatar_surfaces=None):
